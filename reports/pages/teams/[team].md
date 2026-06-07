@@ -65,16 +65,16 @@ select
   m.group_letter,
   case when ht.fifa_code = '${params.team}' then 'Home' else 'Away' end as venue_side,
   ht.team_name as home_team,
-  at.team_name as away_team,
+  awt.team_name as away_team,
   m.channel_en,
   m.channel_es
 from warehouse.dim_match m
 inner join warehouse.dim_team ht
   on m.home_team_key = ht.team_key
-inner join warehouse.dim_team at
-  on m.away_team_key = at.team_key
+inner join warehouse.dim_team awt
+  on m.away_team_key = awt.team_key
 where ht.fifa_code = '${params.team}'
-   or at.fifa_code = '${params.team}'
+   or awt.fifa_code = '${params.team}'
 order by m.match_no
 ```
 
@@ -105,17 +105,17 @@ select
   ht.team_name as home_team,
   r.home_score,
   r.away_score,
-  at.team_name as away_team,
+  awt.team_name as away_team,
   r.result
 from warehouse.fct_result r
 inner join warehouse.dim_match m
   on r.match_key = m.match_key
 inner join warehouse.dim_team ht
   on r.home_team_key = ht.team_key
-inner join warehouse.dim_team at
-  on r.away_team_key = at.team_key
+inner join warehouse.dim_team awt
+  on r.away_team_key = awt.team_key
 where ht.fifa_code = '${params.team}'
-   or at.fifa_code = '${params.team}'
+   or awt.fifa_code = '${params.team}'
 order by m.match_no
 ```
 

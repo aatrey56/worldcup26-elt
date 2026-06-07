@@ -41,7 +41,7 @@ select
   ht.team_name as home_team,
   r.home_score,
   r.away_score,
-  at.team_name as away_team,
+  awt.team_name as away_team,
   r.result,
   r.played_at
 from warehouse.fct_result r
@@ -49,8 +49,8 @@ inner join warehouse.dim_match m
   on r.match_key = m.match_key
 inner join warehouse.dim_team ht
   on r.home_team_key = ht.team_key
-inner join warehouse.dim_team at
-  on r.away_team_key = at.team_key
+inner join warehouse.dim_team awt
+  on r.away_team_key = awt.team_key
 order by coalesce(r.played_at, m.match_date) desc
 limit 10
 ```

@@ -1,4 +1,4 @@
 name: warehouse
 type: duckdb
 options:
-  filename: ../include/data/warehouse.duckdb
+  filename: ../../../include/data/warehouse.duckdb
