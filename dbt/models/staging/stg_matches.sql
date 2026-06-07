@@ -21,5 +21,6 @@ select
     payload ->> '$.fixture.venue.city'                      as venue_city,
     payload ->> '$.league.round'                            as round_label,
     (payload -> '$.teams.home.id')::bigint                  as home_team_id,
-    (payload -> '$.teams.away.id')::bigint                  as away_team_id
+    (payload -> '$.teams.away.id')::bigint                  as away_team_id,
+    loaded_at
 from src

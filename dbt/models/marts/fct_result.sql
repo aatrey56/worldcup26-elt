@@ -1,12 +1,36 @@
 -- Grain: one row per FINISHED match.
--- Built as a normal TABLE in this phase (NOT incremental; that conversion
--- happens in a later phase). match_key is obtained by joining
--- int_results_scored to dim_match on the (home_team, away_team) name pair.
+--
+-- INCREMENTAL model. unique_key = match_key. Strategy = delete+insert, which
+-- gives upsert (merge) semantics on DuckDB (DuckDB has no native MERGE): dbt
+-- deletes the incoming match_keys from the target, then inserts the new rows,
+-- so a corrected score replaces its existing row and never duplicates it.
+--
+-- Incremental predicate: on incremental runs we only pull source rows whose
+-- raw load timestamp is newer than the newest one already loaded. Because the
+-- loader stamps a fresh loaded_at whenever a fixture is (re)landed, this picks
+-- up BOTH brand-new finished matches AND corrections to already-loaded scores,
+-- while skipping rows that have not changed. On the first run the table does
+-- not exist, so is_incremental() is false and every finished match is loaded.
+--
+-- match_key is obtained by joining int_results_scored to dim_match on the
+-- (home_team, away_team) name pair.
+
+{{
+    config(
+        materialized='incremental',
+        unique_key='match_key',
+        incremental_strategy='delete+insert'
+    )
+}}
 
 with results as (
 
     select *
     from {{ ref('int_results_scored') }}
+
+    {% if is_incremental() %}
+    where source_loaded_at > (select max(source_loaded_at) from {{ this }})
+    {% endif %}
 
 ),
 
@@ -37,6 +61,7 @@ select
         else null
     end                                        as winner_team_key,
     r.kickoff_utc                              as played_at,
+    r.source_loaded_at,
     current_timestamp                          as loaded_at
 from results r
 left join matches m

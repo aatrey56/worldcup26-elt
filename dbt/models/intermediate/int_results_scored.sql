@@ -17,6 +17,7 @@ scored as (
     select
         fixture_id,
         kickoff_utc,
+        loaded_at,
         home_team,
         away_team,
         home_score,
@@ -57,6 +58,7 @@ select
     sch.match_no,
     sch.group_letter,
     s.kickoff_utc,
+    s.loaded_at                                as source_loaded_at,
     s.home_team,
     s.away_team,
     s.home_score,
