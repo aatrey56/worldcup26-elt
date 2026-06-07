@@ -1,0 +1,14 @@
+# Pre-commit hooks. VERIFY hook rev tags against latest stable before enabling.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: VERIFY_LATEST
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/sqlfluff/sqlfluff
+    rev: VERIFY_LATEST
+    hooks:
+      - id: sqlfluff-lint
+        additional_dependencies: ["dbt-duckdb", "sqlfluff-templater-dbt"]

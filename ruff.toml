@@ -1,0 +1,16 @@
+# Ruff config for the extract/load Python code.
+target-version = "py312"
+line-length = 100
+
+[lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+]
+
+[lint.isort]
+known-first-party = ["include"]

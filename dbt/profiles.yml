@@ -1,0 +1,24 @@
+# dbt profiles. DuckDB is the dev/CI target. Swap to Snowflake/MotherDuck by
+# changing only the active output (Phase 7) - models never change.
+#
+# DuckDB is SINGLE-WRITER: threads stays at 1 so Cosmos cannot open concurrent
+# writers on one file (see plan Phase 3 concurrency note).
+worldcup26:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('DUCKDB_PATH', 'include/data/warehouse.duckdb') }}"
+      threads: 1
+
+    # --- swap target (Phase 7), kept for portability ---
+    # snowflake:
+    #   type: snowflake
+    #   account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+    #   user: "{{ env_var('SNOWFLAKE_USER') }}"
+    #   password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+    #   role: "{{ env_var('SNOWFLAKE_ROLE') }}"
+    #   database: WORLDCUP26
+    #   warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE') }}"
+    #   schema: marts
+    #   threads: 4
