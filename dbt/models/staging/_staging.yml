@@ -1,0 +1,54 @@
+version: 2
+
+models:
+  - name: stg_schedule
+    description: "One row per scheduled match (104), cleaned from the authoritative seed. is_placeholder flags knockout rows with non-country teams."
+    columns:
+      - name: match_no
+        description: "Integer match number (1..104), unique per match."
+        tests:
+          - unique
+          - not_null
+      - name: stage
+        description: "Tournament stage."
+        tests:
+          - accepted_values:
+              values: ['group', 'r32', 'r16', 'qf', 'sf', 'third', 'final']
+      - name: is_placeholder
+        description: "True when home or away team is a placeholder (Winner/Runner-up/3rd/TBD)."
+        tests:
+          - not_null
+
+  - name: stg_matches
+    description: "One row per fixture from the API-Football v3 fixtures feed (JSON extracted)."
+    columns:
+      - name: fixture_id
+        description: "API-Football fixture id."
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_standings
+    description: "One row per team-in-group from the API-Football v3 standings feed (JSON extracted)."
+    columns:
+      - name: team_id
+        description: "API-Football team id."
+        tests:
+          - not_null
+
+  - name: stg_teams
+    description: "One row per real team (country) in the schedule, with optional API team_id."
+    columns:
+      - name: team_name
+        description: "Country name as it appears in the schedule seed."
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_venues
+    description: "One row per distinct (venue, city) pair in the schedule."
+    columns:
+      - name: venue_name
+        description: "Venue name."
+        tests:
+          - not_null

@@ -1,0 +1,27 @@
+version: 2
+
+sources:
+  - name: raw
+    description: "Raw landing zone loaded by the EL ingest (Phase 1). One row per API-Football v3 object, stored as JSON."
+    schema: raw
+    tables:
+      - name: fixtures
+        description: "One row per fixture. payload is the full API-Football v3 fixture object."
+        columns:
+          - name: fixture_id
+            description: "API-Football fixture id."
+          - name: payload
+            description: "Full v3 fixture JSON object."
+          - name: loaded_at
+            description: "Ingest timestamp."
+      - name: standings
+        description: "One row per team-in-group. payload is a v3 standings entry."
+        columns:
+          - name: team_id
+            description: "API-Football team id."
+          - name: group_label
+            description: "Group label (e.g. Group A)."
+          - name: payload
+            description: "Full v3 standings entry JSON object."
+          - name: loaded_at
+            description: "Ingest timestamp."

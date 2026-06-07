@@ -1,0 +1,103 @@
+version: 2
+
+models:
+  - name: dim_team
+    description: "One row per real team (country). Surrogate team_key from team_name."
+    columns:
+      - name: team_key
+        description: "Surrogate key (hash of team_name)."
+        tests:
+          - unique
+          - not_null
+      - name: team_name
+        description: "Country name."
+        tests:
+          - not_null
+
+  - name: dim_venue
+    description: "One row per venue (venue + city)."
+    columns:
+      - name: venue_key
+        description: "Surrogate key (hash of venue_name + city)."
+        tests:
+          - unique
+          - not_null
+
+  - name: dim_match
+    description: "One row per scheduled match (exactly 104). Placeholder knockout rows have null team keys."
+    columns:
+      - name: match_key
+        description: "Surrogate key (hash of match_no)."
+        tests:
+          - unique
+          - not_null
+      - name: stage
+        description: "Tournament stage."
+        tests:
+          - accepted_values:
+              values: ['group', 'r32', 'r16', 'qf', 'sf', 'third', 'final']
+      - name: group_letter
+        description: "Group A..L for group-stage rows; empty/null for knockout."
+        tests:
+          - accepted_values:
+              values: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
+              config:
+                where: "group_letter is not null and group_letter != ''"
+      - name: venue_key
+        description: "FK to dim_venue."
+        tests:
+          - relationships:
+              to: ref('dim_venue')
+              field: venue_key
+
+  - name: fct_result
+    description: "One row per finished match with derived result and winner."
+    tests:
+      - dbt_utils.expression_is_true:
+          expression: "home_score >= 0 and away_score >= 0"
+    columns:
+      - name: match_key
+        description: "FK to dim_match."
+        tests:
+          - relationships:
+              to: ref('dim_match')
+              field: match_key
+      - name: home_team_key
+        description: "FK to dim_team (home side)."
+        tests:
+          - relationships:
+              to: ref('dim_team')
+              field: team_key
+      - name: away_team_key
+        description: "FK to dim_team (away side)."
+        tests:
+          - relationships:
+              to: ref('dim_team')
+              field: team_key
+
+  - name: fct_group_standings
+    description: "One row per (group_letter, team): recomputed group table with rank and qualification flag."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - group_letter
+            - team_key
+    columns:
+      - name: team_key
+        description: "FK to dim_team."
+        tests:
+          - relationships:
+              to: ref('dim_team')
+              field: team_key
+
+  - name: agg_team_tournament
+    description: "One row per team: tournament-level aggregate from fct_result."
+    columns:
+      - name: team_key
+        description: "FK to dim_team."
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              to: ref('dim_team')
+              field: team_key

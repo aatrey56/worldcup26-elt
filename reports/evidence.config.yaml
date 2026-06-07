@@ -1,0 +1,12 @@
+appearance:
+  default: system
+  switcher: true
+
+plugins:
+  components:
+    # This loads all of Evidence's core charts and UI components.
+    "@evidence-dev/core-components": {}
+
+  datasources:
+    # Only the DuckDB datasource is needed for this project (reads the warehouse).
+    "@evidence-dev/duckdb": {}

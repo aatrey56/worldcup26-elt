@@ -1,0 +1,77 @@
+[
+  {
+    "fixture": {
+      "id": 9001,
+      "date": "2026-06-11T19:00:00+00:00",
+      "status": {"short": "FT", "long": "Match Finished"},
+      "venue": {"id": 1, "name": "Estadio Azteca", "city": "Mexico City"}
+    },
+    "league": {"id": 1, "season": 2026, "round": "Group Stage - 1"},
+    "teams": {
+      "home": {"id": 2382, "name": "Mexico"},
+      "away": {"id": 1531, "name": "South Africa"}
+    },
+    "goals": {"home": 2, "away": 1},
+    "score": {"fulltime": {"home": 2, "away": 1}}
+  },
+  {
+    "fixture": {
+      "id": 9002,
+      "date": "2026-06-12T02:00:00+00:00",
+      "status": {"short": "FT", "long": "Match Finished"},
+      "venue": {"id": 2, "name": "Estadio Akron", "city": "Guadalajara"}
+    },
+    "league": {"id": 1, "season": 2026, "round": "Group Stage - 1"},
+    "teams": {
+      "home": {"id": 1571, "name": "South Korea"},
+      "away": {"id": 5000, "name": "Czechia"}
+    },
+    "goals": {"home": 1, "away": 1},
+    "score": {"fulltime": {"home": 1, "away": 1}}
+  },
+  {
+    "fixture": {
+      "id": 9003,
+      "date": "2026-06-12T19:00:00+00:00",
+      "status": {"short": "NS", "long": "Not Started"},
+      "venue": {"id": 3, "name": "BMO Field", "city": "Toronto"}
+    },
+    "league": {"id": 1, "season": 2026, "round": "Group Stage - 1"},
+    "teams": {
+      "home": {"id": 2380, "name": "Canada"},
+      "away": {"id": 5001, "name": "Bosnia & Herzegovina"}
+    },
+    "goals": {"home": null, "away": null},
+    "score": {"fulltime": {"home": null, "away": null}}
+  },
+  {
+    "fixture": {
+      "id": 9004,
+      "date": "2026-06-15T19:00:00+00:00",
+      "status": {"short": "NS", "long": "Not Started"},
+      "venue": {"id": 1, "name": "Estadio Azteca", "city": "Mexico City"}
+    },
+    "league": {"id": 1, "season": 2026, "round": "Group Stage - 2"},
+    "teams": {
+      "home": {"id": 2382, "name": "Mexico"},
+      "away": {"id": 5000, "name": "Czechia"}
+    },
+    "goals": {"home": null, "away": null},
+    "score": {"fulltime": {"home": null, "away": null}}
+  },
+  {
+    "fixture": {
+      "id": 9005,
+      "date": "2026-06-15T22:00:00+00:00",
+      "status": {"short": "NS", "long": "Not Started"},
+      "venue": {"id": 2, "name": "Estadio Akron", "city": "Guadalajara"}
+    },
+    "league": {"id": 1, "season": 2026, "round": "Group Stage - 2"},
+    "teams": {
+      "home": {"id": 1531, "name": "South Africa"},
+      "away": {"id": 1571, "name": "South Korea"}
+    },
+    "goals": {"home": null, "away": null},
+    "score": {"fulltime": {"home": null, "away": null}}
+  }
+]
