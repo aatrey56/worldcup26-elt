@@ -1,0 +1,13 @@
+# Euro 2024 player-valuation analysis: pinned dependencies.
+# Isolated venv only. Install with:
+#   python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+statsbombpy==1.19.0
+socceraction==1.5.3
+pandas==2.3.3
+numpy==1.26.4
+scikit-learn==1.9.0
+matplotlib==3.10.9
+pyarrow==24.0.0
+scipy==1.17.1
+# multimethod must be <2.0 so pandera 0.17.2 (a socceraction dep) imports cleanly.
+multimethod==1.12
