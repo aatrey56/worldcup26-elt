@@ -6,6 +6,10 @@ The 23rd FIFA World Cup runs from **June 11 to July 19, 2026**, hosted across th
 
 **How to watch (United States):** English language coverage on FOX and FS1. Spanish language coverage on Telemundo and Universo.
 
+**Explore:** [Group standings](/groups) - [Team leaderboard](/leaderboard) - [Knockout bracket](/bracket) - [Golden boot](/scorers) - [Expected goals](/xg) - [Shot map](/shots) - [Teams](/teams)
+
+The bracket fills in automatically as results load, and the expected-goals (xG) and shot-map pages are driven by a **custom xG model** trained on FIFA shot coordinates and scored in pure SQL inside the warehouse.
+
 ```sql tournament_counts
 select
   (select count(*) from warehouse.dim_match) as total_matches,
@@ -71,3 +75,7 @@ limit 10
 No matches have been played yet. The tournament kicks off on June 11, 2026. Check back here for live results.
 
 {/if}
+
+---
+
+_Data: FIFA (api.fifa.com) and football-data.org. xG is a custom model; not affiliated with FIFA._
