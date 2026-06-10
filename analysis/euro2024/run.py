@@ -21,10 +21,9 @@ import argparse
 import logging
 from pathlib import Path
 
-import pandas as pd
-
 import aggregate as agg
 import data as data_mod
+import pandas as pd
 import rankings as rk
 import value_models as vm
 
@@ -47,7 +46,12 @@ def make_figures(overall: pd.DataFrame, carry: pd.DataFrame, output_dir: Path) -
     import matplotlib.pyplot as plt
 
     for table, value_col, title, fname in (
-        (overall.head(15), "vaep_adj_p90_shrunk", "Top 15 outfield: shrunk opp-adj VAEP/90", "top_vaep.png"),
+        (
+            overall.head(15),
+            "vaep_adj_p90_shrunk",
+            "Top 15 outfield: shrunk opp-adj VAEP/90",
+            "top_vaep.png",
+        ),
         (carry.head(15), "carry_score", "Top 15 carry score", "top_carry.png"),
     ):
         fig, ax = plt.subplots(figsize=(9, 6))

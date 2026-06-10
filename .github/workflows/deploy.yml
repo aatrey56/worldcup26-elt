@@ -68,6 +68,16 @@ jobs:
           WC_SEASON: "2026"
         run: python -m include.extract.load_raw
 
+      - name: Load LIVE FIFA shot data into DuckDB
+        # FIFA's free public API (api.fifa.com, no key): shot x,y, events,
+        # lineups, top scorers. Creates the raw.fifa_* tables (empty before
+        # kickoff) the FIFA staging models read. Fails loud like load_raw so a
+        # broken feed stops the job and nothing stale is deployed.
+        env:
+          WC_COMPETITION: WC
+          WC_SEASON: "2026"
+        run: python -m include.extract.load_fifa
+
       - name: dbt build (seeds, models, tests)
         working-directory: dbt
         run: dbt build --profiles-dir .

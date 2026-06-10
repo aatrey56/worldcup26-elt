@@ -34,9 +34,9 @@ import socceraction.spadl as spadl
 import socceraction.vaep.features as fs
 import socceraction.vaep.formula as vaepformula
 import socceraction.vaep.labels as lab
-from socceraction.xthreat import ExpectedThreat
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.model_selection import GroupKFold
+from socceraction.xthreat import ExpectedThreat
 
 logger = logging.getLogger(__name__)
 

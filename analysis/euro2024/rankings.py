@@ -15,10 +15,9 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+import aggregate as agg
 import numpy as np
 import pandas as pd
-
-import aggregate as agg
 
 logger = logging.getLogger(__name__)
 

@@ -155,7 +155,9 @@ def opponent_adjusted_vaep(
         opp[(g["game_id"], g["away_team_id"])] = g["home_team_id"]
 
     a = actions.copy()
-    a["opp_team_id"] = [opp.get((gid, tid)) for gid, tid in zip(a["game_id"], a["team_id"])]
+    a["opp_team_id"] = [
+        opp.get((gid, tid)) for gid, tid in zip(a["game_id"], a["team_id"], strict=True)
+    ]
     a["opp_strength"] = a["opp_team_id"].map(strength_map).fillna(0.5)
     a["weight"] = 0.5 + a["opp_strength"]
     a["vaep_adj_contrib"] = a["vaep_value"] * a["weight"]
