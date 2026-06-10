@@ -117,3 +117,73 @@ models:
           - relationships:
               to: ref('dim_team')
               field: team_key
+
+  # --- FIFA xG (Phase 2): pure-SQL scoring from the offline-trained model ---
+  - name: dim_fifa_player
+    description: "One row per FIFA player (player_id). Player dimension for xG leaderboards: names/teams from lineups, with the season top-scorers feed as a name fallback. position is null for players seen only in the top-scorers feed (no position there)."
+    columns:
+      - name: player_id
+        description: "FIFA IdPlayer."
+        tests:
+          - unique
+          - not_null
+      - name: player_name
+        description: "Player name, coalesced from lineups then top-scorers."
+
+  - name: fct_shot
+    description: "One row per shot (from stg_fifa_shots) with xG scored in pure SQL from the xg_model seed. Penalties use the empirical penalty_xg constant; open-play shots use the logistic model on shot_distance/shot_angle; open-play shots with null coordinates get null xG. Empty pre-tournament."
+    columns:
+      - name: match_id
+        description: "FIFA IdMatch this shot belongs to."
+        tests:
+          - not_null
+      - name: player_id
+        description: "FIFA IdPlayer who took the shot."
+      - name: team_id
+        description: "FIFA IdTeam of the shooting side."
+      - name: is_goal
+        description: "True if the shot was a goal."
+      - name: is_penalty
+        description: "True for penalty shots (scored by penalty_xg)."
+      - name: xg
+        description: "Expected goals for this shot in [0,1]. Null for open-play shots with no coordinates (no geometry to score)."
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+              config:
+                where: "xg is not null"
+
+  - name: agg_player_xg
+    description: "One row per player who has taken a shot: xG leaderboard with shots, goals, total_xg, xg_per_shot, and finishing (goals - total_xg). Names via dim_fifa_player. Empty pre-tournament."
+    columns:
+      - name: player_id
+        description: "FIFA IdPlayer."
+        tests:
+          - unique
+          - not_null
+      - name: shots
+        description: "Number of shots taken."
+        tests:
+          - not_null
+      - name: goals
+        description: "Goals scored (open-play + penalties)."
+        tests:
+          - not_null
+      - name: total_xg
+        description: "Sum of per-shot xG (null xG contributes 0)."
+      - name: finishing
+        description: "goals - total_xg: positive = over-performing expectation."
+
+  - name: agg_team_xg
+    description: "One row per team that has taken or faced a shot: shots, goals, total_xg, finishing, plus xg_against / goals_against (xG and goals of shots taken against the team in its matches). Empty pre-tournament."
+    columns:
+      - name: team_id
+        description: "FIFA IdTeam."
+        tests:
+          - unique
+          - not_null
+      - name: total_xg
+        description: "Sum of the team's own shot xG."
+      - name: xg_against
+        description: "Sum of opponents' shot xG in the team's matches."

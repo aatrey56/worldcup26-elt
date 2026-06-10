@@ -32,6 +32,7 @@ from include.extract.raw_tables import (
     RawContractError,
     align_standings_schema,
     replace_fifa_events,
+    replace_fifa_lineups,
     replace_fifa_matches,
     replace_fifa_topscorers,
     replace_fixtures,
@@ -79,6 +80,9 @@ def load_fifa(con: duckdb.DuckDBPyConnection, loaded_at: datetime) -> dict[str, 
     fifa_events.json     list of {match_id, event_idx, payload} where payload is
                          the loader-enriched event (normalized coords + geometry),
                          exactly the row shape the live FIFA loader stores.
+    fifa_lineups.json    list of {match_id, player_id, payload} where payload is a
+                         FIFA lineup player object (IdPlayer/IdTeam/PlayerName/
+                         Position): the player-dimension source.
     fifa_topscorers.json list of PlayerStatsList entries.
     Keeps dbt build hermetic for the FIFA staging models in CI.
     """
@@ -89,9 +93,18 @@ def load_fifa(con: duckdb.DuckDBPyConnection, loaded_at: datetime) -> dict[str, 
     events = [(r["match_id"], r["event_idx"], r["payload"]) for r in event_rows]
     n_events = replace_fifa_events(con, events, loaded_at)
 
+    lineup_rows = _load_json("fifa_lineups.json")
+    lineups = [(r["player_id"], r["match_id"], r["payload"]) for r in lineup_rows]
+    n_lineups = replace_fifa_lineups(con, lineups, loaded_at)
+
     players = _load_json("fifa_topscorers.json")
     n_scorers = replace_fifa_topscorers(con, players, loaded_at)
-    return {"fifa_matches": n_matches, "fifa_events": n_events, "fifa_topscorers": n_scorers}
+    return {
+        "fifa_matches": n_matches,
+        "fifa_events": n_events,
+        "fifa_lineups": n_lineups,
+        "fifa_topscorers": n_scorers,
+    }
 
 
 def main() -> None:

@@ -45,6 +45,17 @@ sources:
             description: "Enriched FIFA event JSON object."
           - name: loaded_at
             description: "Ingest timestamp."
+      - name: fifa_lineups
+        description: "One row per player appearance in a match lineup (player_id, match_id) from the FIFA live endpoint. payload is the lineup player object (IdPlayer, IdTeam, PlayerName, Position). Source for the FIFA player dimension. Empty pre-tournament."
+        columns:
+          - name: player_id
+            description: "FIFA IdPlayer."
+          - name: match_id
+            description: "FIFA IdMatch the appearance belongs to."
+          - name: payload
+            description: "FIFA lineup player JSON object."
+          - name: loaded_at
+            description: "Ingest timestamp."
       - name: fifa_topscorers
         description: "One row per player from the FIFA season top-scorers feed (PlayerStatsList). payload is the full player stats object."
         columns:

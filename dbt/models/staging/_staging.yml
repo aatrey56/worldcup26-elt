@@ -164,3 +164,24 @@ models:
         description: "Player name (PlayerInfo.PlayerName[0].Description)."
       - name: goals
         description: "Goals scored this season."
+
+  - name: stg_fifa_lineups
+    description: "One row per player appearance in a match lineup (raw.fifa_lineups), a 1:1 read of the FIFA live-endpoint lineup player object. position_code is FIFA's int code mapped to a readable position. Empty pre-tournament."
+    columns:
+      - name: player_id
+        description: "FIFA IdPlayer."
+        tests:
+          - not_null
+      - name: match_id
+        description: "FIFA IdMatch the appearance belongs to."
+        tests:
+          - not_null
+      - name: player_name
+        description: "Player name (PlayerName[0].Description)."
+      - name: position
+        description: "Readable position from position_code (Goalkeeper/Defender/Midfielder/Forward; null for bench/code 4)."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - player_id
+            - match_id

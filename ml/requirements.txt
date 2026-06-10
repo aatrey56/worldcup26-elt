@@ -1,0 +1,15 @@
+# DEV-ONLY training dependencies for the offline xG model (ml/train_xg.py).
+#
+# IMPORTANT: scikit-learn is NOT a pipeline dependency. The trained model is
+# exported as plain coefficients to a dbt seed (dbt/seeds/xg_model.csv) and
+# scored in PURE SQL inside dbt, so sklearn must NEVER be added to the pipeline
+# requirements.txt or the Dockerfile. Install these only into the repo .venv when
+# (re)training the model:
+#
+#     .venv/bin/pip install -r ml/requirements.txt
+#
+# duckdb is already a pipeline dependency; pinned here only so a fresh training
+# environment is self-contained.
+scikit-learn==1.6.1
+numpy==2.4.6
+duckdb==1.5.3

@@ -18,6 +18,11 @@ timeline and lands its events. Also lands the season top scorers. Targets:
             shot_distance, shot_angle           xG geometry from x_norm/y_norm.
         Geometry is computed in the loader (Python) because the 0-1 normalization
         depends on a per-match scale decision that is awkward in pure SQL.
+    raw.fifa_lineups(player_id BIGINT, match_id BIGINT, payload JSON, loaded_at,
+                     primary key (player_id, match_id))
+        one row per player appearance in a match's lineup. payload = the FIFA
+        lineup player object (IdPlayer, IdTeam, PlayerName, Position). Source for
+        the FIFA player dimension so xG leaderboards show names. Empty-safe.
     raw.fifa_topscorers(player_id BIGINT pk, payload JSON, loaded_at TIMESTAMP)
         one row per PlayerStatsList entry, payload = the full player stats object.
 
@@ -49,6 +54,7 @@ from include.extract.fifa import (
 )
 from include.extract.raw_tables import (
     replace_fifa_events,
+    replace_fifa_lineups,
     replace_fifa_matches,
     replace_fifa_topscorers,
     validate_fifa_matches,
@@ -326,6 +332,86 @@ def load_topscorers(
     return n
 
 
+def _lineup_rows_for_match(
+    match_id: int, detail: dict[str, Any]
+) -> list[tuple[int, int, dict[str, Any]]]:
+    """Extract (player_id, match_id, player_payload) rows from a match detail.
+
+    Reads HomeTeam.Players and AwayTeam.Players from the FIFA live endpoint
+    response. Each player object carries IdPlayer, IdTeam, PlayerName, and
+    Position. Schema-tolerant: missing/odd shapes yield no rows rather than
+    raising, so a partial feed degrades gracefully.
+    """
+    rows: list[tuple[int, int, dict[str, Any]]] = []
+    if not isinstance(detail, dict):
+        return rows
+    for side in ("HomeTeam", "AwayTeam"):
+        team = detail.get(side)
+        if not isinstance(team, dict):
+            continue
+        players = team.get("Players")
+        if not isinstance(players, list):
+            continue
+        for player in players:
+            if not isinstance(player, dict):
+                continue
+            pid = _coerce_int(player.get("IdPlayer"))
+            if pid is None:
+                continue
+            rows.append((pid, match_id, player))
+    return rows
+
+
+def load_lineups(
+    con: duckdb.DuckDBPyConnection,
+    client: FIFAClient,
+    matches: list[dict[str, Any]],
+    loaded_at: datetime,
+    competition: int = WC_COMPETITION,
+    season: int = WC_SEASON,
+) -> int:
+    """Fetch lineups for played/live matches and land one row per appearance.
+
+    Reuses the FIFA live endpoint via FIFAClient.get_lineups. Empty-safe: with no
+    played matches this lands an empty table and never calls the endpoint. A
+    match whose detail lacks lineups (placeholder/odd feed) simply contributes no
+    rows. Failures on a single match are logged and skipped so one bad match
+    cannot abort the whole load.
+    """
+    rows: list[tuple[int, int, dict[str, Any]]] = []
+    played = [m for m in matches if m.get("MatchStatus") in PLAYED_OR_LIVE_STATUSES]
+    logger.info("%d matches are lineup candidates", len(played))
+
+    for match in played:
+        match_id = _coerce_int(match.get("IdMatch"))
+        stage = _coerce_int(match.get("IdStage"))
+        if match_id is None or stage is None:
+            logger.warning(
+                "skipping lineups for match with non-int-coercible "
+                "IdMatch=%r / IdStage=%r",
+                match.get("IdMatch"),
+                match.get("IdStage"),
+            )
+            continue
+        try:
+            detail = client.get_lineups(
+                season=season,
+                stage=stage,
+                match=match_id,
+                competition=competition,
+                use_cache=False,
+            )
+        except Exception as exc:  # noqa: BLE001 - one bad match must not abort all
+            logger.warning("lineup fetch failed for match %s (%s), skipping", match_id, exc)
+            continue
+        rows.extend(_lineup_rows_for_match(match_id, detail))
+        time.sleep(THROTTLE_SECONDS)
+
+    n = replace_fifa_lineups(con, rows, loaded_at)
+    logger.info("raw.fifa_lineups: %d rows", n)
+    return n
+
+
 def _test_2022_final(
     con: duckdb.DuckDBPyConnection, client: FIFAClient, loaded_at: datetime
 ) -> None:
@@ -348,6 +434,7 @@ def _test_2022_final(
     replace_fifa_matches(con, [match_row], loaded_at)
     logger.info("raw.fifa_matches: 1 row (synthetic 2022 final)")
     load_events(con, client, [match_row], loaded_at, season=cfg["season"])
+    load_lineups(con, client, [match_row], loaded_at, season=cfg["season"])
     load_topscorers(con, client, loaded_at, season=cfg["season"])
 
 
@@ -364,10 +451,11 @@ def main() -> None:
         else:
             matches = load_calendar(con, client, loaded_at)
             load_events(con, client, matches, loaded_at)
+            load_lineups(con, client, matches, loaded_at)
             load_topscorers(con, client, loaded_at)
         counts = {
             t: con.execute(f"select count(*) from raw.{t}").fetchone()[0]
-            for t in ("fifa_matches", "fifa_events", "fifa_topscorers")
+            for t in ("fifa_matches", "fifa_events", "fifa_lineups", "fifa_topscorers")
         }
         logger.info("row counts: %s", counts)
     finally:

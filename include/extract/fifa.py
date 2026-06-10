@@ -292,6 +292,34 @@ class FIFAClient(BaseApiClient):
                 cache_path.unlink()
         return payload
 
+    def get_lineups(
+        self,
+        season: int,
+        stage: int,
+        match: int,
+        competition: int = WC_COMPETITION,
+        use_cache: bool = True,
+    ) -> dict[str, Any]:
+        """Match detail incl. lineups for one match (the FIFA "live" endpoint).
+
+        Path is /live/football/{competition}/{season}/{stage}/{match}. Verified
+        shape: the response carries HomeTeam and AwayTeam objects, each with a
+        Players list whose entries carry IdPlayer, IdTeam, a localized PlayerName
+        ([{Locale, Description}]), ShortName, and an integer Position code
+        (0=goalkeeper, 1=defender, 2=midfielder, 3=forward; 4 is used for bench /
+        no on-field position). This is the player dimension source so xG
+        leaderboards can show names.
+
+        Empty-safe by design: pre-tournament there are zero played matches, so the
+        loader never calls this. For an unplayed/placeholder match the endpoint may
+        404 or omit Players; the loader degrades to landing no lineup rows.
+        """
+        return self.get(
+            f"live/football/{competition}/{season}/{stage}/{match}",
+            {"language": "en"},
+            use_cache=use_cache,
+        )
+
     def get_topscorers(
         self,
         season: int = WC_SEASON,

@@ -265,6 +265,64 @@ def replace_fifa_events(
     return len(rows)
 
 
+def replace_fifa_lineups(
+    con: duckdb.DuckDBPyConnection,
+    lineups: list[tuple[int, int, dict[str, Any]]],
+    loaded_at: datetime,
+) -> int:
+    """Ensure raw.fifa_lineups exists and replace it with one row per appearance.
+
+    lineups is a list of (player_id, match_id, player_payload). The grain is one
+    row per (player_id, match_id): a player appears once per match they were named
+    in. player_payload is the FIFA lineup player object (carrying IdPlayer, IdTeam,
+    PlayerName, Position, etc.). The primary key (player_id, match_id) keeps the
+    load idempotent and lets dim_fifa_player dedup a player across matches.
+
+    DEDUP: a player can appear at most once per match in a lineup, but we defend
+    against a feed that repeats an entry by keeping the first occurrence per
+    (player_id, match_id). Entries with a non-int-coercible id are skipped and
+    logged. Empty-safe: with no played matches this is simply an empty table.
+    """
+    con.execute(
+        """
+        create table if not exists raw.fifa_lineups (
+            player_id  bigint,
+            match_id   bigint,
+            payload    json,
+            loaded_at  timestamp,
+            primary key (player_id, match_id)
+        )
+        """
+    )
+    rows: list[tuple[int, int, str, datetime]] = []
+    seen: set[tuple[int, int]] = set()
+    for player_id_raw, match_id_raw, payload in lineups:
+        try:
+            player_id = int(player_id_raw)
+            match_id = int(match_id_raw)
+        except (ValueError, TypeError):
+            logger.warning(
+                "fifa lineup entry has non-int id(s) player=%r match=%r, skipping",
+                player_id_raw,
+                match_id_raw,
+            )
+            continue
+        key = (player_id, match_id)
+        if key in seen:
+            logger.warning(
+                "fifa lineup duplicate (player=%s, match=%s), keeping first",
+                player_id,
+                match_id,
+            )
+            continue
+        seen.add(key)
+        rows.append((player_id, match_id, json.dumps(payload), loaded_at))
+    con.execute("delete from raw.fifa_lineups")
+    if rows:
+        con.executemany("insert into raw.fifa_lineups values (?, ?, ?, ?)", rows)
+    return len(rows)
+
+
 def replace_fifa_topscorers(
     con: duckdb.DuckDBPyConnection, players: list[dict[str, Any]], loaded_at: datetime
 ) -> int:
