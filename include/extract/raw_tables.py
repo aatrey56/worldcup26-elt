@@ -147,3 +147,163 @@ def replace_standings(
     )
     rows = [(int(r["team"]["id"]), json.dumps(r), loaded_at) for r in table_rows]
     return _replace_rows(con, "raw.standings", rows)
+
+
+# --- FIFA raw tables (Phase 1 shot-level ingest) -----------------------------
+# The FIFA public API (api.fifa.com) is undocumented, so validation here is
+# deliberately lighter than the football-data contract: we assert only the
+# minimum structural shape (a list of objects, ids present where we make them a
+# primary key) and let schema-tolerant parsing in the loader/staging produce
+# nulls for anything else. Every match/topscorer object is stored whole as JSON.
+
+# Keys every FIFA calendar match must carry to be landable (it is our pk source).
+REQUIRED_FIFA_MATCH_KEYS = ("IdMatch",)
+
+
+def validate_fifa_matches(matches: Any) -> list[dict[str, Any]]:
+    """Validate the FIFA calendar match list before landing.
+
+    Empty-safe: an empty list is allowed (pre-tournament there can be 0 matches
+    in some calls, though WC 2026 currently returns 104). We require a list of
+    objects each carrying IdMatch, since that is the primary key.
+
+    DEDUP (F5): raw.fifa_matches makes IdMatch its primary key, so a calendar
+    that repeats an IdMatch (seen on FIFA feeds) would crash the load on a PK
+    violation. Mirroring validate_matches, we drop duplicate IdMatch (keeping the
+    first occurrence) and log it rather than failing.
+    """
+    if matches is None:
+        return []
+    if not isinstance(matches, list):
+        logger.error("fifa matches contract violation: expected a list, got %r", type(matches))
+        raise RawContractError("fifa matches payload is not a list")
+    deduped: list[dict[str, Any]] = []
+    seen: set[Any] = set()
+    for idx, match in enumerate(matches):
+        if not isinstance(match, dict):
+            logger.error("fifa matches[%d] is not an object: %r", idx, type(match))
+            raise RawContractError(f"fifa match at index {idx} is not an object")
+        missing = [k for k in REQUIRED_FIFA_MATCH_KEYS if k not in match or match[k] is None]
+        if missing:
+            logger.error(
+                "fifa matches[%d] missing required keys: %s", idx, missing
+            )
+            raise RawContractError(f"fifa match at index {idx} missing keys: {missing}")
+        match_id = match["IdMatch"]
+        if match_id in seen:
+            logger.warning(
+                "fifa matches[%d] duplicate IdMatch %r, keeping first occurrence",
+                idx,
+                match_id,
+            )
+            continue
+        seen.add(match_id)
+        deduped.append(match)
+    return deduped
+
+
+def replace_fifa_matches(
+    con: duckdb.DuckDBPyConnection, matches: list[dict[str, Any]], loaded_at: datetime
+) -> int:
+    """Ensure raw.fifa_matches exists and replace it with one row per match."""
+    con.execute(
+        """
+        create table if not exists raw.fifa_matches (
+            match_id   bigint primary key,
+            payload    json,
+            loaded_at  timestamp
+        )
+        """
+    )
+    # F6: skip-and-log matches whose IdMatch is not int-coercible (placeholder/
+    # TBD knockout slots) rather than raising ValueError and aborting the load.
+    rows: list[tuple[int, str, datetime]] = []
+    for m in matches:
+        try:
+            match_id = int(m["IdMatch"])
+        except (ValueError, TypeError):
+            logger.warning(
+                "fifa match has non-int-coercible IdMatch %r, skipping",
+                m.get("IdMatch"),
+            )
+            continue
+        rows.append((match_id, json.dumps(m), loaded_at))
+    return _replace_rows(con, "raw.fifa_matches", rows)
+
+
+def replace_fifa_events(
+    con: duckdb.DuckDBPyConnection,
+    events: list[tuple[int, int, dict[str, Any]]],
+    loaded_at: datetime,
+) -> int:
+    """Ensure raw.fifa_events exists and replace it with one row per event.
+
+    events is a list of (match_id, event_idx, enriched_event_payload). The
+    payload already carries loader-computed normalized coordinates and geometry
+    (x_norm, y_norm, is_goal, is_penalty, shot_distance, shot_angle) so dbt
+    staging stays a clean 1:1 projection. Empty-safe: with no finished matches
+    this is simply an empty table.
+    """
+    con.execute(
+        """
+        create table if not exists raw.fifa_events (
+            match_id   bigint,
+            event_idx  integer,
+            payload    json,
+            loaded_at  timestamp,
+            primary key (match_id, event_idx)
+        )
+        """
+    )
+    rows = [
+        (int(match_id), int(event_idx), json.dumps(payload), loaded_at)
+        for match_id, event_idx, payload in events
+    ]
+    con.execute("delete from raw.fifa_events")
+    if rows:
+        con.executemany("insert into raw.fifa_events values (?, ?, ?, ?)", rows)
+    return len(rows)
+
+
+def replace_fifa_topscorers(
+    con: duckdb.DuckDBPyConnection, players: list[dict[str, Any]], loaded_at: datetime
+) -> int:
+    """Ensure raw.fifa_topscorers exists and replace it with one row per player.
+
+    players are PlayerStatsList entries from the topscorers feed; the primary key
+    is PlayerInfo.IdPlayer. Entries without a resolvable player id are skipped
+    (logged) rather than failing the load. Empty-safe.
+    """
+    con.execute(
+        """
+        create table if not exists raw.fifa_topscorers (
+            player_id  bigint primary key,
+            payload    json,
+            loaded_at  timestamp
+        )
+        """
+    )
+    rows: list[tuple[int, str, datetime]] = []
+    seen: set[int] = set()
+    for player in players or []:
+        # F4: PlayerStatsList entries may be null/non-dict (and an absent feed,
+        # e.g. season 285023, yields a null body the caller passes as []). Skip
+        # anything that is not a dict instead of calling .get() on it.
+        if not isinstance(player, dict):
+            logger.warning("fifa topscorer entry is not an object (%r), skipping", type(player))
+            continue
+        player_info = player.get("PlayerInfo")
+        pid_raw = player_info.get("IdPlayer") if isinstance(player_info, dict) else None
+        if pid_raw is None:
+            logger.warning("fifa topscorer entry missing PlayerInfo.IdPlayer, skipping")
+            continue
+        try:
+            pid = int(pid_raw)
+        except (ValueError, TypeError):
+            logger.warning("fifa topscorer has non-integer IdPlayer %r, skipping", pid_raw)
+            continue
+        if pid in seen:
+            continue
+        seen.add(pid)
+        rows.append((pid, json.dumps(player), loaded_at))
+    return _replace_rows(con, "raw.fifa_topscorers", rows)

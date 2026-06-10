@@ -89,3 +89,78 @@ models:
         description: "Venue name."
         tests:
           - not_null
+
+  # --- FIFA public API (api.fifa.com v3) shot-level staging, Phase 1 ---
+  - name: stg_fifa_matches
+    description: "One row per FIFA calendar match (competition 17, season 285023). JSON extracted from raw.fifa_matches. Scores/possession are null pre-tournament."
+    columns:
+      - name: match_id
+        description: "FIFA IdMatch."
+        tests:
+          - unique
+          - not_null
+      - name: match_date
+        description: "Kickoff timestamp (payload.Date, UTC)."
+      - name: status
+        description: "FIFA MatchStatus (0=played, 1=upcoming, 3/12=live)."
+      - name: home_team_name
+        description: "Home team name (Home.TeamName[0].Description)."
+      - name: away_team_name
+        description: "Away team name (Away.TeamName[0].Description)."
+
+  - name: stg_fifa_events
+    description: "One row per FIFA timeline event (raw.fifa_events), a 1:1 read of the loader-enriched payload. Empty pre-tournament."
+    columns:
+      - name: match_id
+        description: "FIFA IdMatch this event belongs to."
+        tests:
+          - not_null
+      - name: event_idx
+        description: "Zero-based event index within the match timeline."
+        tests:
+          - not_null
+      - name: event_desc
+        description: "Event type description (TypeLocalized[0].Description)."
+
+  - name: stg_fifa_shots
+    description: "One row per shot event (attempt/goal/penalty goal/penalty missed) from raw.fifa_events. x,y are normalized 0-1 (attacked goal at x=1, y=0.5); shot_distance/shot_angle are xG geometry computed by the loader. Empty pre-tournament."
+    columns:
+      - name: match_id
+        description: "FIFA IdMatch this shot belongs to."
+        tests:
+          - not_null
+      - name: x
+        description: "Normalized x in [0,1] (0=centre, 1=goal line). Null when the source event had no coordinates."
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+      - name: y
+        description: "Normalized y in [0,1] (0.5=centre of pitch/goal). Null when the source event had no coordinates."
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+      - name: is_goal
+        description: "True for Goal!/Penalty Goal events."
+      - name: is_penalty
+        description: "True for penalty shots (Penalty Goal/Penalty missed)."
+      - name: shot_outcome
+        description: "Best-effort outcome: goal / missed / attempt."
+      - name: shot_distance
+        description: "Distance from the shot to the goal centre (1, 0.5) in normalized units."
+      - name: shot_angle
+        description: "Angle (radians) subtended by the goal mouth at the shot location."
+
+  - name: stg_fifa_topscorers
+    description: "One row per player from the FIFA season top-scorers feed (PlayerStatsList). Empty pre-tournament."
+    columns:
+      - name: player_id
+        description: "FIFA IdPlayer."
+        tests:
+          - unique
+          - not_null
+      - name: player_name
+        description: "Player name (PlayerInfo.PlayerName[0].Description)."
+      - name: goals
+        description: "Goals scored this season."

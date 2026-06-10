@@ -29,9 +29,14 @@ from typing import Any
 import duckdb
 
 from include.extract.raw_tables import (
+    RawContractError,
     align_standings_schema,
+    replace_fifa_events,
+    replace_fifa_matches,
+    replace_fifa_topscorers,
     replace_fixtures,
     replace_standings,
+    validate_fifa_matches,
     validate_matches,
 )
 
@@ -67,6 +72,28 @@ def load_standings(con: duckdb.DuckDBPyConnection, loaded_at: datetime) -> int:
     return replace_standings(con, table_rows, loaded_at)
 
 
+def load_fifa(con: duckdb.DuckDBPyConnection, loaded_at: datetime) -> dict[str, int]:
+    """Land the committed FIFA samples (real, trimmed 2022 data).
+
+    fifa_matches.json    list of FIFA calendar match objects.
+    fifa_events.json     list of {match_id, event_idx, payload} where payload is
+                         the loader-enriched event (normalized coords + geometry),
+                         exactly the row shape the live FIFA loader stores.
+    fifa_topscorers.json list of PlayerStatsList entries.
+    Keeps dbt build hermetic for the FIFA staging models in CI.
+    """
+    matches = validate_fifa_matches(_load_json("fifa_matches.json"))
+    n_matches = replace_fifa_matches(con, matches, loaded_at)
+
+    event_rows = _load_json("fifa_events.json")
+    events = [(r["match_id"], r["event_idx"], r["payload"]) for r in event_rows]
+    n_events = replace_fifa_events(con, events, loaded_at)
+
+    players = _load_json("fifa_topscorers.json")
+    n_scorers = replace_fifa_topscorers(con, players, loaded_at)
+    return {"fifa_matches": n_matches, "fifa_events": n_events, "fifa_topscorers": n_scorers}
+
+
 def main() -> None:
     db = _db_path()
     loaded_at = datetime.now(UTC)
@@ -78,6 +105,20 @@ def main() -> None:
         n_fix = load_fixtures(con, loaded_at)
         n_std = load_standings(con, loaded_at)
         logger.info("raw.fixtures: %d rows, raw.standings: %d rows", n_fix, n_std)
+        # F7: FIFA sample loading is decoupled from the football-data hermetic
+        # path. The football-data sample load above is the critical CI contract;
+        # a missing/malformed FIFA sample must NOT break it. We therefore land
+        # FIFA samples best-effort and log-and-continue on failure rather than
+        # aborting (the FIFA staging models are empty-safe without these rows).
+        try:
+            fifa_counts = load_fifa(con, loaded_at)
+            logger.info("FIFA sample row counts: %s", fifa_counts)
+        except (OSError, ValueError, KeyError, TypeError, RawContractError) as exc:
+            logger.warning(
+                "FIFA sample load failed (%s); continuing so the football-data "
+                "hermetic sample load is preserved",
+                exc,
+            )
     finally:
         con.close()
 

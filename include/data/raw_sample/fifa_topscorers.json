@@ -1,0 +1,147 @@
+[
+ {
+  "PlayerInfo": {
+   "IdPlayer": "389867",
+   "IdCountry": "FRA",
+   "PlayerName": [
+    {
+     "Locale": "en-GB",
+     "Description": "Kylian MBAPPE"
+    }
+   ],
+   "IdTeam": "43946",
+   "TeamType": 1
+  },
+  "Total": 0,
+  "Rank": 1,
+  "MatchesPlayed": 7,
+  "ActualMinutesPlayed": 597,
+  "MatchesStarted": 6,
+  "GoalsScored": 8,
+  "Assists": 2,
+  "GoalsScoredOnPenalty": 2,
+  "GoalsScoredByLeftFoot": null,
+  "GoalsScoredByRightFoot": null,
+  "GoalsScoredByHead": 1,
+  "GoalsScoredByBackheel": null,
+  "GoalsScoredByOtherPartOfBody": 0,
+  "TotalAttempts": 31,
+  "AttemptsOnTarget": 13
+ },
+ {
+  "PlayerInfo": {
+   "IdPlayer": "229397",
+   "IdCountry": "ARG",
+   "PlayerName": [
+    {
+     "Locale": "en-GB",
+     "Description": "Lionel MESSI"
+    }
+   ],
+   "IdTeam": "43922",
+   "TeamType": 1
+  },
+  "Total": 0,
+  "Rank": 2,
+  "MatchesPlayed": 7,
+  "ActualMinutesPlayed": 690,
+  "MatchesStarted": 7,
+  "GoalsScored": 7,
+  "Assists": 3,
+  "GoalsScoredOnPenalty": 4,
+  "GoalsScoredByLeftFoot": null,
+  "GoalsScoredByRightFoot": null,
+  "GoalsScoredByHead": 0,
+  "GoalsScoredByBackheel": null,
+  "GoalsScoredByOtherPartOfBody": 0,
+  "TotalAttempts": 32,
+  "AttemptsOnTarget": 19
+ },
+ {
+  "PlayerInfo": {
+   "IdPlayer": "358015",
+   "IdCountry": "FRA",
+   "PlayerName": [
+    {
+     "Locale": "en-GB",
+     "Description": "Olivier GIROUD"
+    }
+   ],
+   "IdTeam": "43946",
+   "TeamType": 1
+  },
+  "Total": 0,
+  "Rank": 3,
+  "MatchesPlayed": 6,
+  "ActualMinutesPlayed": 424,
+  "MatchesStarted": 6,
+  "GoalsScored": 4,
+  "Assists": 0,
+  "GoalsScoredOnPenalty": 0,
+  "GoalsScoredByLeftFoot": null,
+  "GoalsScoredByRightFoot": null,
+  "GoalsScoredByHead": 2,
+  "GoalsScoredByBackheel": null,
+  "GoalsScoredByOtherPartOfBody": 0,
+  "TotalAttempts": 17,
+  "AttemptsOnTarget": 6
+ },
+ {
+  "PlayerInfo": {
+   "IdPlayer": "416081",
+   "IdCountry": "ARG",
+   "PlayerName": [
+    {
+     "Locale": "en-GB",
+     "Description": "Julian ALVAREZ"
+    }
+   ],
+   "IdTeam": "43922",
+   "TeamType": 1
+  },
+  "Total": 0,
+  "Rank": 4,
+  "MatchesPlayed": 7,
+  "ActualMinutesPlayed": 466,
+  "MatchesStarted": 5,
+  "GoalsScored": 4,
+  "Assists": 0,
+  "GoalsScoredOnPenalty": 0,
+  "GoalsScoredByLeftFoot": null,
+  "GoalsScoredByRightFoot": null,
+  "GoalsScoredByHead": 0,
+  "GoalsScoredByBackheel": null,
+  "GoalsScoredByOtherPartOfBody": 0,
+  "TotalAttempts": 12,
+  "AttemptsOnTarget": 8
+ },
+ {
+  "PlayerInfo": {
+   "IdPlayer": "448081",
+   "IdCountry": "POR",
+   "PlayerName": [
+    {
+     "Locale": "en-GB",
+     "Description": "GONCALO RAMOS"
+    }
+   ],
+   "IdTeam": "43963",
+   "TeamType": 1
+  },
+  "Total": 0,
+  "Rank": 5,
+  "MatchesPlayed": 4,
+  "ActualMinutesPlayed": 153,
+  "MatchesStarted": 2,
+  "GoalsScored": 3,
+  "Assists": 1,
+  "GoalsScoredOnPenalty": 0,
+  "GoalsScoredByLeftFoot": null,
+  "GoalsScoredByRightFoot": null,
+  "GoalsScoredByHead": 0,
+  "GoalsScoredByBackheel": null,
+  "GoalsScoredByOtherPartOfBody": 0,
+  "TotalAttempts": 6,
+  "AttemptsOnTarget": 5
+ }
+]

@@ -1,0 +1,424 @@
+[
+ {
+  "match_id": 400128145,
+  "event_idx": 0,
+  "payload": {
+   "EventId": "18191500000015",
+   "IdTeam": "43922",
+   "Timestamp": "2022-12-18T14:59:09.953Z",
+   "MatchMinute": "1'",
+   "Period": 0,
+   "HomeGoals": 0,
+   "AwayGoals": 0,
+   "Type": 19,
+   "Qualifiers": [],
+   "TypeLocalized": [
+    {
+     "Locale": "en-GB",
+     "Description": "Coin Toss"
+    }
+   ],
+   "HomePenaltyGoals": 0,
+   "AwayPenaltyGoals": 0,
+   "EventDescription": [],
+   "event_desc": "Coin Toss",
+   "x_norm": null,
+   "y_norm": null,
+   "is_shot": false,
+   "is_goal": false,
+   "is_penalty": false,
+   "shot_outcome": null,
+   "shot_distance": null,
+   "shot_angle": null
+  }
+ },
+ {
+  "match_id": 400128145,
+  "event_idx": 1,
+  "payload": {
+   "EventId": "18191500000016",
+   "Timestamp": "2022-12-18T15:00:06.505Z",
+   "MatchMinute": "1'",
+   "Period": 3,
+   "HomeGoals": 0,
+   "AwayGoals": 0,
+   "Type": 7,
+   "Qualifiers": [],
+   "TypeLocalized": [
+    {
+     "Locale": "en-GB",
+     "Description": "Start Time"
+    }
+   ],
+   "HomePenaltyGoals": 0,
+   "AwayPenaltyGoals": 0,
+   "EventDescription": [
+    {
+     "Locale": "en-GB",
+     "Description": "The referee signals the start of the first period."
+    }
+   ],
+   "event_desc": "Start Time",
+   "x_norm": null,
+   "y_norm": null,
+   "is_shot": false,
+   "is_goal": false,
+   "is_penalty": false,
+   "shot_outcome": null,
+   "shot_distance": null,
+   "shot_angle": null
+  }
+ },
+ {
+  "match_id": 400128145,
+  "event_idx": 12,
+  "payload": {
+   "EventId": "18191500000095",
+   "IdTeam": "43922",
+   "IdPlayer": "430628",
+   "IdSubPlayer": "297105",
+   "IdSubTeam": "43946",
+   "Timestamp": "2022-12-18T15:04:46.609Z",
+   "MatchMinute": "5'",
+   "Period": 3,
+   "HomeGoals": 0,
+   "AwayGoals": 0,
+   "Type": 12,
+   "Qualifiers": [],
+   "TypeLocalized": [
+    {
+     "Locale": "en-GB",
+     "Description": "Attempt at Goal"
+    }
+   ],
+   "PositionX": 0.5242626,
+   "PositionY": 0.3215859,
+   "GoalGatePositionY": -0.020735294,
+   "GoalGatePositionZ": 0.102,
+   "HomePenaltyGoals": 0,
+   "AwayPenaltyGoals": 0,
+   "EventDescription": [
+    {
+     "Locale": "en-GB",
+     "Description": "MAC ALLISTER (Argentina) attempts an effort on goal."
+    }
+   ],
+   "event_desc": "Attempt at Goal",
+   "x_norm": 0.5242626,
+   "y_norm": 0.8215859,
+   "is_shot": true,
+   "is_goal": false,
+   "is_penalty": false,
+   "shot_outcome": "attempt",
+   "shot_distance": 0.574233023116548,
+   "shot_angle": 0.1554206704296646
+  }
+ },
+ {
+  "match_id": 400128145,
+  "event_idx": 19,
+  "payload": {
+   "EventId": "18191500000161",
+   "IdTeam": "43922",
+   "IdPlayer": "428882",
+   "IdSubPlayer": "359440",
+   "IdSubTeam": "43946",
+   "Timestamp": "2022-12-18T15:07:42.409Z",
+   "MatchMinute": "8'",
+   "Period": 3,
+   "HomeGoals": 0,
+   "AwayGoals": 0,
+   "Type": 12,
+   "Qualifiers": [],
+   "TypeLocalized": [
+    {
+     "Locale": "en-GB",
+     "Description": "Attempt at Goal"
+    }
+   ],
+   "HomePenaltyGoals": 0,
+   "AwayPenaltyGoals": 0,
+   "EventDescription": [
+    {
+     "Locale": "en-GB",
+     "Description": "DE PAUL (Argentina) attempts an effort on goal."
+    }
+   ],
+   "event_desc": "Attempt at Goal",
+   "x_norm": null,
+   "y_norm": null,
+   "is_shot": true,
+   "is_goal": false,
+   "is_penalty": false,
+   "shot_outcome": "attempt",
+   "shot_distance": null,
+   "shot_angle": null
+  }
+ },
+ {
+  "match_id": 400128145,
+  "event_idx": 34,
+  "payload": {
+   "EventId": "18191500000286",
+   "IdTeam": "43922",
+   "IdPlayer": "266800",
+   "Timestamp": "2022-12-18T15:16:22.739Z",
+   "MatchMinute": "17'",
+   "Period": 3,
+   "HomeGoals": 0,
+   "AwayGoals": 0,
+   "Type": 12,
+   "Qualifiers": [],
+   "TypeLocalized": [
+    {
+     "Locale": "en-GB",
+     "Description": "Attempt at Goal"
+    }
+   ],
+   "PositionX": 0.71075165,
+   "PositionY": 0.12187959,
+   "GoalGatePositionY": 0.08411764,
+   "GoalGatePositionZ": 0.808,
+   "HomePenaltyGoals": 0,
+   "AwayPenaltyGoals": 0,
+   "EventDescription": [
+    {
+     "Locale": "en-GB",
+     "Description": "DI MAR\u00cdA (Argentina) attempts an effort on goal."
+    }
+   ],
+   "event_desc": "Attempt at Goal",
+   "x_norm": 0.71075165,
+   "y_norm": 0.62187959,
+   "is_shot": true,
+   "is_goal": false,
+   "is_penalty": false,
+   "shot_outcome": "attempt",
+   "shot_distance": 0.31387775078251506,
+   "shot_angle": 0.3147945564611545
+  }
+ },
+ {
+  "match_id": 400128145,
+  "event_idx": 42,
+  "payload": {
+   "EventId": "18191500000354",
+   "IdTeam": "43922",
+   "IdPlayer": "229397",
+   "IdSubPlayer": "297105",
+   "IdSubTeam": "43946",
+   "Timestamp": "2022-12-18T15:22:29.083Z",
+   "MatchMinute": "23'",
+   "Period": 3,
+   "HomeGoals": 1,
+   "AwayGoals": 0,
+   "Type": 41,
+   "Qualifiers": [],
+   "TypeLocalized": [
+    {
+     "Locale": "en-GB",
+     "Description": "Penalty Goal"
+    }
+   ],
+   "PositionX": 0.7904762,
+   "PositionY": 0.0,
+   "GoalGatePositionY": 0.06544118,
+   "GoalGatePositionZ": 0.017,
+   "HomePenaltyGoals": 0,
+   "AwayPenaltyGoals": 0,
+   "EventDescription": [
+    {
+     "Locale": "en-GB",
+     "Description": "MESSI (Argentina) successfully converts the penalty!"
+    }
+   ],
+   "event_desc": "Penalty Goal",
+   "x_norm": 0.7904762,
+   "y_norm": 0.5,
+   "is_shot": true,
+   "is_goal": true,
+   "is_penalty": true,
+   "shot_outcome": "goal",
+   "shot_distance": 0.20952380000000004,
+   "shot_angle": 0.5028962565687232
+  }
+ },
+ {
+  "match_id": 400128145,
+  "event_idx": 60,
+  "payload": {
+   "EventId": "18191500000455",
+   "IdTeam": "43922",
+   "IdPlayer": "430628",
+   "Timestamp": "2022-12-18T15:31:43.325Z",
+   "MatchMinute": "32'",
+   "Period": 3,
+   "HomeGoals": 1,
+   "AwayGoals": 0,
+   "Type": 12,
+   "Qualifiers": [],
+   "TypeLocalized": [
+    {
+     "Locale": "en-GB",
+     "Description": "Attempt at Goal"
+    }
+   ],
+   "PositionX": 0.5547098,
+   "PositionY": 0.4684288,
+   "GoalGatePositionY": 0.9982353,
+   "GoalGatePositionZ": 0.04,
+   "HomePenaltyGoals": 0,
+   "AwayPenaltyGoals": 0,
+   "EventDescription": [
+    {
+     "Locale": "en-GB",
+     "Description": "MAC ALLISTER (Argentina) attempts an effort on goal."
+    }
+   ],
+   "event_desc": "Attempt at Goal",
+   "x_norm": 0.5547098,
+   "y_norm": 0.9684288,
+   "is_shot": true,
+   "is_goal": false,
+   "is_penalty": false,
+   "shot_outcome": "attempt",
+   "shot_distance": 0.6463040328556522,
+   "shot_angle": 0.11504614629457716
+  }
+ },
+ {
+  "match_id": 400128145,
+  "event_idx": 69,
+  "payload": {
+   "EventId": "18191500000535",
+   "IdTeam": "43922",
+   "IdPlayer": "266800",
+   "IdSubPlayer": "297105",
+   "IdSubTeam": "43946",
+   "Timestamp": "2022-12-18T15:35:29.919Z",
+   "MatchMinute": "36'",
+   "Period": 3,
+   "HomeGoals": 2,
+   "AwayGoals": 0,
+   "Type": 0,
+   "Qualifiers": [],
+   "TypeLocalized": [
+    {
+     "Locale": "en-GB",
+     "Description": "Goal!"
+    }
+   ],
+   "PositionX": 0.85156995,
+   "PositionY": 0.2452276,
+   "GoalGatePositionY": 0.044852942,
+   "GoalGatePositionZ": 0.019,
+   "HomePenaltyGoals": 0,
+   "AwayPenaltyGoals": 0,
+   "EventDescription": [
+    {
+     "Locale": "en-GB",
+     "Description": "DI MAR\u00cdA (Argentina) scores!!"
+    }
+   ],
+   "event_desc": "Goal!",
+   "x_norm": 0.85156995,
+   "y_norm": 0.7452276,
+   "is_shot": true,
+   "is_goal": true,
+   "is_penalty": false,
+   "shot_outcome": "goal",
+   "shot_distance": 0.28664970878192514,
+   "shot_angle": 0.19889727621324751
+  }
+ },
+ {
+  "match_id": 400128145,
+  "event_idx": 107,
+  "payload": {
+   "EventId": "18191500000866",
+   "IdTeam": "43922",
+   "IdPlayer": "428882",
+   "IdSubPlayer": "297105",
+   "IdSubTeam": "43946",
+   "Timestamp": "2022-12-18T16:11:31.658Z",
+   "MatchMinute": "49'",
+   "Period": 5,
+   "HomeGoals": 2,
+   "AwayGoals": 0,
+   "Type": 12,
+   "Qualifiers": [],
+   "TypeLocalized": [
+    {
+     "Locale": "en-GB",
+     "Description": "Attempt at Goal"
+    }
+   ],
+   "PositionX": -0.72407234,
+   "PositionY": 0.3274596,
+   "GoalGatePositionY": -0.025147058,
+   "GoalGatePositionZ": 0.063,
+   "HomePenaltyGoals": 0,
+   "AwayPenaltyGoals": 0,
+   "EventDescription": [
+    {
+     "Locale": "en-GB",
+     "Description": "DE PAUL (Argentina) attempts an effort on goal."
+    }
+   ],
+   "event_desc": "Attempt at Goal",
+   "x_norm": 0.72407234,
+   "y_norm": 0.8274596000000001,
+   "is_shot": true,
+   "is_goal": false,
+   "is_penalty": false,
+   "shot_outcome": "attempt",
+   "shot_distance": 0.4282124042869796,
+   "shot_angle": 0.1631243638656454
+  }
+ },
+ {
+  "match_id": 400128145,
+  "event_idx": 128,
+  "payload": {
+   "EventId": "18191500000998",
+   "IdTeam": "43922",
+   "IdPlayer": "416081",
+   "IdSubPlayer": "297105",
+   "IdSubTeam": "43946",
+   "Timestamp": "2022-12-18T16:21:02.684Z",
+   "MatchMinute": "59'",
+   "Period": 5,
+   "HomeGoals": 2,
+   "AwayGoals": 0,
+   "Type": 12,
+   "Qualifiers": [],
+   "TypeLocalized": [
+    {
+     "Locale": "en-GB",
+     "Description": "Attempt at Goal"
+    }
+   ],
+   "PositionX": -0.8420552,
+   "PositionY": -0.40969163,
+   "GoalGatePositionY": -0.10426471,
+   "GoalGatePositionZ": 0.014,
+   "HomePenaltyGoals": 0,
+   "AwayPenaltyGoals": 0,
+   "EventDescription": [
+    {
+     "Locale": "en-GB",
+     "Description": "J. ALVAREZ (Argentina) attempts an effort on goal."
+    }
+   ],
+   "event_desc": "Attempt at Goal",
+   "x_norm": 0.8420552,
+   "y_norm": 0.09030837000000003,
+   "is_shot": true,
+   "is_goal": false,
+   "is_penalty": false,
+   "shot_outcome": "attempt",
+   "shot_distance": 0.4390828982539594,
+   "shot_angle": 0.08929627207958173
+  }
+ }
+]

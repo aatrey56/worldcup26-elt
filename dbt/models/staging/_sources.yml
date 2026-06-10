@@ -23,3 +23,34 @@ sources:
             description: "Standings table-row JSON object (group injected by loader)."
           - name: loaded_at
             description: "Ingest timestamp."
+
+      # --- FIFA public API (api.fifa.com v3) shot-level ingest, Phase 1 ---
+      - name: fifa_matches
+        description: "One row per FIFA calendar match (competition 17, season 285023). payload is the full calendar match object from /calendar/matches."
+        columns:
+          - name: match_id
+            description: "FIFA IdMatch."
+          - name: payload
+            description: "Full FIFA calendar match JSON object."
+          - name: loaded_at
+            description: "Ingest timestamp."
+      - name: fifa_events
+        description: "One row per FIFA timeline event for played/live matches. payload is the raw FIFA event ENRICHED by the loader with normalized coords (x_norm, y_norm) and shot geometry/classification (is_shot/is_goal/is_penalty/shot_outcome/shot_distance/shot_angle), so staging is a clean 1:1 read. Empty pre-tournament."
+        columns:
+          - name: match_id
+            description: "FIFA IdMatch this event belongs to."
+          - name: event_idx
+            description: "Zero-based index of the event within the match timeline."
+          - name: payload
+            description: "Enriched FIFA event JSON object."
+          - name: loaded_at
+            description: "Ingest timestamp."
+      - name: fifa_topscorers
+        description: "One row per player from the FIFA season top-scorers feed (PlayerStatsList). payload is the full player stats object."
+        columns:
+          - name: player_id
+            description: "FIFA IdPlayer (PlayerInfo.IdPlayer)."
+          - name: payload
+            description: "Full FIFA player-stats JSON object."
+          - name: loaded_at
+            description: "Ingest timestamp."
