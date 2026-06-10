@@ -2,6 +2,15 @@ appearance:
   default: system
   switcher: true
 
+# Deployed as a GitHub Pages project page under https://aatrey56.github.io/worldcup26-elt/
+# so every asset and markdown link must be prefixed with /worldcup26-elt. Evidence's
+# deployment.basePath does this automatically at build time (links in markdown pages and
+# core-component assets are rewritten). Must start with / and must not end with /.
+# Build output stays in the default reports/build/ dir (EVIDENCE_BUILD_DIR is left default),
+# and that dir is published at the Pages site root, so basePath alone yields correct URLs.
+deployment:
+  basePath: /worldcup26-elt
+
 plugins:
   components:
     # This loads all of Evidence's core charts and UI components.

@@ -21,7 +21,10 @@ with src as (
 
 crosswalk as (
 
-    select api_name, seed_name from {{ ref('team_name_crosswalk') }}
+    select
+        api_name,
+        seed_name
+    from {{ ref('team_name_crosswalk') }}
 
 ),
 
@@ -29,21 +32,21 @@ extracted as (
 
     select
         fixture_id,
-        cast(payload ->> '$.utcDate' as timestamp)            as kickoff_utc,
-        payload ->> '$.status'                                 as status,
-        payload ->> '$.homeTeam.name'                          as home_team_raw,
-        payload ->> '$.awayTeam.name'                          as away_team_raw,
-        payload ->> '$.homeTeam.tla'                            as home_team_tla,
-        payload ->> '$.awayTeam.tla'                            as away_team_tla,
-        (payload -> '$.score.fullTime.home')::int             as home_score,
-        (payload -> '$.score.fullTime.away')::int             as away_score,
-        payload ->> '$.stage'                                  as stage,
-        payload ->> '$.group'                                  as group_label,
-        (payload -> '$.matchday')::int                        as matchday,
-        (payload -> '$.homeTeam.id')::bigint                  as home_team_id,
-        (payload -> '$.awayTeam.id')::bigint                  as away_team_id,
-        cast(payload ->> '$.lastUpdated' as timestamp)        as last_updated,
-        loaded_at
+        cast(payload ->> '$.utcDate' as timestamp) as kickoff_utc,
+        cast(payload ->> '$.lastUpdated' as timestamp) as last_updated,
+        loaded_at,
+        payload ->> '$.status' as status,
+        payload ->> '$.homeTeam.name' as home_team_raw,
+        payload ->> '$.awayTeam.name' as away_team_raw,
+        payload ->> '$.homeTeam.tla' as home_team_tla,
+        payload ->> '$.awayTeam.tla' as away_team_tla,
+        cast((payload -> '$.score.fullTime.home') as int) as home_score,
+        cast((payload -> '$.score.fullTime.away') as int) as away_score,
+        payload ->> '$.stage' as stage,
+        payload ->> '$.group' as group_label,
+        cast((payload -> '$.matchday') as int) as matchday,
+        cast((payload -> '$.homeTeam.id') as bigint) as home_team_id,
+        cast((payload -> '$.awayTeam.id') as bigint) as away_team_id
     from src
 
 )
@@ -52,8 +55,6 @@ select
     e.fixture_id,
     e.kickoff_utc,
     e.status,
-    coalesce(hx.seed_name, e.home_team_raw)               as home_team,
-    coalesce(ax.seed_name, e.away_team_raw)               as away_team,
     e.home_team_tla,
     e.away_team_tla,
     e.home_score,
@@ -64,7 +65,9 @@ select
     e.home_team_id,
     e.away_team_id,
     e.last_updated,
-    e.loaded_at
-from extracted e
-left join crosswalk hx on e.home_team_raw = hx.api_name
-left join crosswalk ax on e.away_team_raw = ax.api_name
+    e.loaded_at,
+    coalesce(hx.seed_name, e.home_team_raw) as home_team,
+    coalesce(ax.seed_name, e.away_team_raw) as away_team
+from extracted as e
+left join crosswalk as hx on e.home_team_raw = hx.api_name
+left join crosswalk as ax on e.away_team_raw = ax.api_name

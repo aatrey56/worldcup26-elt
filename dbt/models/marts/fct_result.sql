@@ -42,48 +42,51 @@ with results as (
     -- table exists but is empty, so max(...) is NULL and `x > NULL` would filter
     -- out the FIRST results to ever arrive. Fall back to a floor timestamp so
     -- the first finished matches load.
-    where source_loaded_at > (
-        select coalesce(max(source_loaded_at), timestamp '1900-01-01')
-        from {{ this }}
-    )
+        where source_loaded_at > (
+            select coalesce(max(source_loaded_at), timestamp '1900-01-01')
+            from {{ this }}
+        )
     {% endif %}
 
 ),
 
 matches as (
 
-    select match_key, match_id
+    select
+        match_key,
+        match_id
     from {{ ref('dim_match') }}
 
 ),
 
 teams as (
 
-    select team_key, team_name
+    select
+        team_key,
+        team_name
     from {{ ref('dim_team') }}
 
 )
 
 select
     m.match_key,
-    ht.team_key                                as home_team_key,
-    awt.team_key                               as away_team_key,
+    ht.team_key as home_team_key,
+    awt.team_key as away_team_key,
     r.home_score,
     r.away_score,
     r.result,
+    r.kickoff_utc as played_at,
+    r.source_loaded_at,
     case
         when r.result = 'home_win' then ht.team_key
         when r.result = 'away_win' then awt.team_key
-        else null
-    end                                        as winner_team_key,
-    r.kickoff_utc                              as played_at,
-    r.source_loaded_at,
-    current_timestamp                          as loaded_at
-from results r
-left join matches m
+    end as winner_team_key,
+    current_timestamp as loaded_at
+from results as r
+left join matches as m
     on r.fixture_id = m.match_id
-left join teams ht
+left join teams as ht
     on r.home_team = ht.team_name
-left join teams awt
+left join teams as awt
     on r.away_team = awt.team_name
 where m.match_key is not null

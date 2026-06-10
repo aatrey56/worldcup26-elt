@@ -17,6 +17,7 @@ from pathlib import Path
 from airflow import DAG
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
+from callbacks import notify_slack_failure
 from cosmos import (
     DbtTaskGroup,
     ExecutionConfig,
@@ -25,7 +26,6 @@ from cosmos import (
     RenderConfig,
 )
 
-from callbacks import notify_slack_failure
 from include.extract import load_raw
 
 DBT_PROJECT_PATH = Path("/usr/local/airflow/dbt")

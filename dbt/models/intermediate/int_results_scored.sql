@@ -17,9 +17,10 @@ with matches as (
 
     select *
     from {{ ref('stg_matches') }}
-    where status = 'FINISHED'
-      and home_score is not null
-      and away_score is not null
+    where
+        status = 'FINISHED'
+        and home_score is not null
+        and away_score is not null
 
 ),
 
@@ -55,14 +56,18 @@ scored as (
 
 match_map as (
 
-    select fixture_id, match_no
+    select
+        fixture_id,
+        match_no
     from {{ ref('int_match_map') }}
 
 ),
 
 schedule as (
 
-    select match_no, group_letter
+    select
+        match_no,
+        group_letter
     from {{ ref('stg_schedule') }}
 
 )
@@ -80,16 +85,16 @@ select
     -- score correction), so the predicate re-pulls only genuinely changed rows.
     -- coalesce to loaded_at so a null lastUpdated never yields a null
     -- source_loaded_at (which would fail `null > max` and silently drop the match).
-    coalesce(s.last_updated, s.loaded_at)      as source_loaded_at,
     s.home_team,
     s.away_team,
     s.home_score,
     s.away_score,
     s.result,
     s.home_points,
-    s.away_points
-from scored s
-left join match_map mm
+    s.away_points,
+    coalesce(s.last_updated, s.loaded_at) as source_loaded_at
+from scored as s
+left join match_map as mm
     on s.fixture_id = mm.fixture_id
-left join schedule sch
+left join schedule as sch
     on mm.match_no = sch.match_no

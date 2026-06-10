@@ -32,16 +32,25 @@ api_attrs as (
     -- standings feed; max() picks the single non-null code per team.
     select
         team_name,
-        max(team_id)  as team_id,
+        max(team_id) as team_id,
         max(team_tla) as fifa_code
     from (
-        select home_team as team_name, home_team_id as team_id, home_team_tla as team_tla
+        select
+            home_team as team_name,
+            home_team_id as team_id,
+            home_team_tla as team_tla
         from {{ ref('stg_matches') }}
         union all
-        select away_team as team_name, away_team_id as team_id, away_team_tla as team_tla
+        select
+            away_team as team_name,
+            away_team_id as team_id,
+            away_team_tla as team_tla
         from {{ ref('stg_matches') }}
         union all
-        select team_name, team_id, team_tla
+        select
+            team_name,
+            team_id,
+            team_tla
         from {{ ref('stg_standings') }}
     )
     group by team_name
@@ -52,6 +61,6 @@ select
     t.team_name,
     a.team_id,
     a.fifa_code
-from distinct_teams t
-left join api_attrs a
+from distinct_teams as t
+left join api_attrs as a
     on t.team_name = a.team_name

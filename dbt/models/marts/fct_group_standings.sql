@@ -27,7 +27,9 @@ with standings as (
 
 teams as (
 
-    select team_key, team_name
+    select
+        team_key,
+        team_name
     from {{ ref('dim_team') }}
 
 ),
@@ -59,7 +61,7 @@ best_thirds as (
         group_letter,
         team_name,
         row_number() over (
-            order by points desc, gd desc, gf desc, team_name
+            order by points desc, gd desc, gf desc, team_name asc
         ) as third_rank
     from standings
     where rank = 3
@@ -87,12 +89,13 @@ select
             and bt.third_rank <= 8
         )
     ) as qualified_flag
-from standings s
-left join teams t
+from standings as s
+left join teams as t
     on s.team_name = t.team_name
-left join group_completeness gc
+left join group_completeness as gc
     on s.group_letter = gc.group_letter
-cross join all_groups_complete agc
-left join best_thirds bt
-    on s.group_letter = bt.group_letter
-   and s.team_name = bt.team_name
+cross join all_groups_complete as agc
+left join best_thirds as bt
+    on
+        s.group_letter = bt.group_letter
+        and s.team_name = bt.team_name

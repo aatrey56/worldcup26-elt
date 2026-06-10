@@ -34,13 +34,13 @@ per_team as (
     select
         group_letter,
         home_team as team_name,
-        1                                          as played,
+        1 as played,
         case when home_points = 3 then 1 else 0 end as won,
         case when home_points = 1 then 1 else 0 end as drawn,
         case when home_points = 0 then 1 else 0 end as lost,
-        home_score                                 as gf,
-        away_score                                 as ga,
-        home_points                                as points
+        home_score as gf,
+        away_score as ga,
+        home_points as points
     from group_results
 
     union all
@@ -49,13 +49,13 @@ per_team as (
     select
         group_letter,
         away_team as team_name,
-        1                                          as played,
+        1 as played,
         case when away_points = 3 then 1 else 0 end as won,
         case when away_points = 1 then 1 else 0 end as drawn,
         case when away_points = 0 then 1 else 0 end as lost,
-        away_score                                 as gf,
-        home_score                                 as ga,
-        away_points                                as points
+        away_score as gf,
+        home_score as ga,
+        away_points as points
     from group_results
 
 ),
@@ -65,14 +65,14 @@ aggregated as (
     select
         group_letter,
         team_name,
-        sum(played)            as played,
-        sum(won)               as won,
-        sum(drawn)             as drawn,
-        sum(lost)              as lost,
-        sum(gf)                as gf,
-        sum(ga)                as ga,
-        sum(gf) - sum(ga)      as gd,
-        sum(points)            as points
+        sum(played) as played,
+        sum(won) as won,
+        sum(drawn) as drawn,
+        sum(lost) as lost,
+        sum(gf) as gf,
+        sum(ga) as ga,
+        sum(gf) - sum(ga) as gd,
+        sum(points) as points
     from per_team
     group by group_letter, team_name
 
@@ -86,6 +86,6 @@ select
     -- documented-but-unimplemented above.)
     row_number() over (
         partition by group_letter
-        order by points desc, gd desc, gf desc, team_name
+        order by points desc, gd desc, gf desc, team_name asc
     ) as rank
 from aggregated

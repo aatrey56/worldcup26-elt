@@ -13,28 +13,31 @@ with src as (
 
 crosswalk as (
 
-    select api_name, seed_name from {{ ref('team_name_crosswalk') }}
+    select
+        api_name,
+        seed_name
+    from {{ ref('team_name_crosswalk') }}
 
 )
 
 select
     src.team_id,
+    src.loaded_at,
     coalesce(cw.seed_name, src.payload ->> '$.team.name') as team_name,
-    src.payload ->> '$.team.tla'                as team_tla,
-    (src.payload -> '$.position')::int          as position,
-    (src.payload -> '$.playedGames')::int       as played_games,
-    (src.payload -> '$.won')::int               as won,
-    (src.payload -> '$.draw')::int              as draw,
-    (src.payload -> '$.lost')::int              as lost,
-    (src.payload -> '$.points')::int            as points,
-    (src.payload -> '$.goalsFor')::int          as goals_for,
-    (src.payload -> '$.goalsAgainst')::int      as goals_against,
-    (src.payload -> '$.goalDifference')::int    as goal_difference,
+    src.payload ->> '$.team.tla' as team_tla,
+    (src.payload -> '$.position')::int as position,
+    (src.payload -> '$.playedGames')::int as played_games,
+    (src.payload -> '$.won')::int as won,
+    (src.payload -> '$.draw')::int as draw,
+    (src.payload -> '$.lost')::int as lost,
+    (src.payload -> '$.points')::int as points,
+    (src.payload -> '$.goalsFor')::int as goals_for,
+    (src.payload -> '$.goalsAgainst')::int as goals_against,
     -- FIX 9: the API emits 'GROUP_A'..'GROUP_L'; every other model uses the
     -- bare letter 'A'..'L'. Strip the 'GROUP_' prefix so the auxiliary
     -- standings cross-check can join the recomputed marts on group.
-    replace(src.payload ->> '$.group', 'GROUP_', '') as group_label,
-    src.loaded_at
+    (src.payload -> '$.goalDifference')::int as goal_difference,
+    replace(src.payload ->> '$.group', 'GROUP_', '') as group_label
 from src
-left join crosswalk cw
+left join crosswalk as cw
     on (src.payload ->> '$.team.name') = cw.api_name

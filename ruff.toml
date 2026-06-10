@@ -2,6 +2,9 @@
 target-version = "py312"
 line-length = 100
 
+# Astro-generated scaffolding, not our code.
+extend-exclude = [".astro", "tests"]
+
 [lint]
 select = [
     "E",   # pycodestyle errors

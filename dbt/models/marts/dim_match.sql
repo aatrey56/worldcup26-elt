@@ -14,21 +14,28 @@ with schedule as (
 
 match_map as (
 
-    select fixture_id, match_no
+    select
+        fixture_id,
+        match_no
     from {{ ref('int_match_map') }}
 
 ),
 
 teams as (
 
-    select team_key, team_name
+    select
+        team_key,
+        team_name
     from {{ ref('dim_team') }}
 
 ),
 
 venues as (
 
-    select venue_key, venue_name, city
+    select
+        venue_key,
+        venue_name,
+        city
     from {{ ref('dim_venue') }}
 
 )
@@ -36,23 +43,23 @@ venues as (
 select
     {{ dbt_utils.generate_surrogate_key(['s.match_no']) }} as match_key,
     s.match_no,
-    mm.fixture_id       as match_id,
+    mm.fixture_id as match_id,
     s.match_date,
     s.kickoff_et,
     s.stage,
     s.round_label,
     s.group_letter,
-    ht.team_key         as home_team_key,
-    awt.team_key        as away_team_key,
+    ht.team_key as home_team_key,
+    awt.team_key as away_team_key,
     v.venue_key,
     s.channel_en,
     s.channel_es
-from schedule s
-left join teams ht
+from schedule as s
+left join teams as ht
     on s.home_team = ht.team_name and not s.is_placeholder
-left join teams awt
+left join teams as awt
     on s.away_team = awt.team_name and not s.is_placeholder
-left join venues v
+left join venues as v
     on s.venue = v.venue_name and s.city = v.city
-left join match_map mm
+left join match_map as mm
     on s.match_no = mm.match_no

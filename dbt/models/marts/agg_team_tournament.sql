@@ -22,16 +22,20 @@ with results as (
 
 match_stage as (
 
-    select match_key, stage
+    select
+        match_key,
+        stage
     from {{ ref('dim_match') }}
 
 ),
 
 results_staged as (
 
-    select r.*, m.stage
-    from results r
-    left join match_stage m
+    select
+        r.*,
+        m.stage
+    from results as r
+    left join match_stage as m
         on r.match_key = m.match_key
 
 ),
@@ -41,10 +45,10 @@ per_appearance as (
     select
         home_team_key as team_key,
         stage,
-        home_score    as gf,
-        away_score    as ga,
+        home_score as gf,
+        away_score as ga,
         case when result = 'home_win' then 1 else 0 end as win,
-        case when result = 'draw' then 1 else 0 end     as draw,
+        case when result = 'draw' then 1 else 0 end as draw,
         case when result = 'away_win' then 1 else 0 end as loss,
         case when result = 'home_win' then 3 when result = 'draw' then 1 else 0 end as points
     from results_staged
@@ -54,10 +58,10 @@ per_appearance as (
     select
         away_team_key as team_key,
         stage,
-        away_score    as gf,
-        home_score    as ga,
+        away_score as gf,
+        home_score as ga,
         case when result = 'away_win' then 1 else 0 end as win,
-        case when result = 'draw' then 1 else 0 end     as draw,
+        case when result = 'draw' then 1 else 0 end as draw,
         case when result = 'home_win' then 1 else 0 end as loss,
         case when result = 'away_win' then 3 when result = 'draw' then 1 else 0 end as points
     from results_staged
@@ -70,10 +74,10 @@ ranked as (
         *,
         case stage
             when 'group' then 1
-            when 'r32'   then 2
-            when 'r16'   then 3
-            when 'qf'    then 4
-            when 'sf'    then 5
+            when 'r32' then 2
+            when 'r16' then 3
+            when 'qf' then 4
+            when 'sf' then 5
             when 'third' then 6
             when 'final' then 7
             else 1
@@ -84,18 +88,18 @@ ranked as (
 
 select
     team_key,
-    count(*)               as matches_played,
-    sum(win)               as wins,
-    sum(draw)              as draws,
-    sum(loss)              as losses,
-    sum(gf)                as gf,
-    sum(ga)                as ga,
-    sum(gf) - sum(ga)      as gd,
-    sum(points)            as points,
+    count(*) as matches_played,
+    sum(win) as wins,
+    sum(draw) as draws,
+    sum(loss) as losses,
+    sum(gf) as gf,
+    sum(ga) as ga,
+    sum(gf) - sum(ga) as gd,
+    sum(points) as points,
     coalesce(
         max_by(stage, stage_order),
         'group'
-    )                      as stage_reached
+    ) as stage_reached
 from ranked
 where team_key is not null
 group by team_key

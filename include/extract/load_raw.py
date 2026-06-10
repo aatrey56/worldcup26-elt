@@ -22,7 +22,7 @@ from __future__ import annotations
 import logging
 import os
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -115,7 +115,7 @@ def load_standings(
 
 def main() -> None:
     db = _db_path()
-    loaded_at = datetime.now(timezone.utc)
+    loaded_at = datetime.now(UTC)
     logger.info("loading live raw data into %s", db)
     client = FootballDataClient()
     con = duckdb.connect(db)

@@ -1,0 +1,126 @@
+name: Deploy
+
+# Builds the warehouse from LIVE football-data.org data, then publishes the
+# Evidence dashboard plus dbt lineage docs to GitHub Pages.
+#   site root         -> Evidence dashboard (reports/build/)
+#   /dbt-docs/        -> dbt docs (dbt/target/index.html + manifest/catalog json)
+# Live URL: https://aatrey56.github.io/worldcup26-elt/
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # Refresh every 6 hours during the tournament (UTC).
+    - cron: "0 */6 * * *"
+
+# Pages deployment needs these scopes and the OIDC id-token.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one Pages deployment at a time; do not cancel an in-progress publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  DUCKDB_PATH: ${{ github.workspace }}/include/data/warehouse.duckdb
+
+jobs:
+  build:
+    name: Build live data, dashboard, and docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: reports/package-lock.json
+
+      - name: Install Python tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install dbt-duckdb==1.10.1 duckdb requests tenacity
+
+      - name: dbt deps
+        working-directory: dbt
+        run: dbt deps
+
+      - name: Load LIVE football-data.org data into DuckDB
+        # If the API call fails (transient error, bad key, rate limit) this step
+        # exits non-zero, the job stops, and nothing is deployed: no stale or
+        # empty site is published.
+        env:
+          FOOTBALL_DATA_KEY: ${{ secrets.FOOTBALL_DATA_KEY }}
+          FOOTBALL_DATA_BASE_URL: https://api.football-data.org/v4
+          WC_COMPETITION: WC
+          WC_SEASON: "2026"
+        run: python -m include.extract.load_raw
+
+      - name: dbt build (seeds, models, tests)
+        working-directory: dbt
+        run: dbt build --profiles-dir .
+
+      - name: dbt docs generate
+        working-directory: dbt
+        run: dbt docs generate
+
+      - name: Install Evidence dependencies
+        working-directory: reports
+        run: npm ci
+
+      - name: Evidence sources (read warehouse)
+        working-directory: reports
+        run: npm run sources
+
+      - name: Evidence build
+        working-directory: reports
+        # The base path /worldcup26-elt is set via deployment.basePath in
+        # reports/evidence.config.yaml, so the static build already has all
+        # asset and link URLs prefixed for the project page.
+        run: npm run build
+
+      - name: Assemble Pages site
+        # Evidence build (site root) + dbt docs under /dbt-docs.
+        run: |
+          set -euo pipefail
+          rm -rf _site
+          mkdir -p _site
+          cp -r reports/build/. _site/
+          mkdir -p _site/dbt-docs
+          cp dbt/target/index.html _site/dbt-docs/
+          cp dbt/target/manifest.json _site/dbt-docs/
+          cp dbt/target/catalog.json _site/dbt-docs/
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+        with:
+          enablement: true
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

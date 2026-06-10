@@ -22,7 +22,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -69,7 +69,7 @@ def load_standings(con: duckdb.DuckDBPyConnection, loaded_at: datetime) -> int:
 
 def main() -> None:
     db = _db_path()
-    loaded_at = datetime.now(timezone.utc)
+    loaded_at = datetime.now(UTC)
     logger.info("loading sample raw data into %s", db)
     con = duckdb.connect(db)
     try:

@@ -57,13 +57,14 @@ group_map as (
     select
         a.fixture_id,
         s.match_no
-    from api_matches a
-    join seed s
-        on s.stage = 'group'
-       and (
-            (a.home_team = s.home_team and a.away_team = s.away_team)
-            or (a.home_team = s.away_team and a.away_team = s.home_team)
-       )
+    from api_matches as a
+    join seed as s
+        on
+            s.stage = 'group'
+            and (
+                (a.home_team = s.home_team and a.away_team = s.away_team)
+                or (a.home_team = s.away_team and a.away_team = s.home_team)
+            )
     where a.stage = 'GROUP_STAGE'
 
 ),
@@ -74,13 +75,13 @@ stage_xwalk as (
     -- map API stage -> seed stage for the knockout rounds
     select * from (
         values
-            ('LAST_32',        'r32'),
-            ('LAST_16',        'r16'),
-            ('QUARTER_FINALS', 'qf'),
-            ('SEMI_FINALS',    'sf'),
-            ('THIRD_PLACE',    'third'),
-            ('FINAL',          'final')
-    ) as x(api_stage, seed_stage)
+        ('LAST_32', 'r32'),
+        ('LAST_16', 'r16'),
+        ('QUARTER_FINALS', 'qf'),
+        ('SEMI_FINALS', 'sf'),
+        ('THIRD_PLACE', 'third'),
+        ('FINAL', 'final')
+    ) as x (api_stage, seed_stage)
 
 ),
 
@@ -93,8 +94,8 @@ api_knockout_ranked as (
             partition by x.seed_stage
             order by a.kickoff_utc, a.fixture_id
         ) as stage_rn
-    from api_matches a
-    join stage_xwalk x
+    from api_matches as a
+    join stage_xwalk as x
         on a.stage = x.api_stage
 
 ),
@@ -108,7 +109,7 @@ seed_knockout_ranked as (
             partition by s.stage
             order by s.match_date, s.kickoff_et, s.match_no
         ) as stage_rn
-    from seed s
+    from seed as s
     where s.stage in ('r32', 'r16', 'qf', 'sf', 'third', 'final')
 
 ),
@@ -118,13 +119,20 @@ knockout_map as (
     select
         a.fixture_id,
         s.match_no
-    from api_knockout_ranked a
-    join seed_knockout_ranked s
-        on a.seed_stage = s.seed_stage
-       and a.stage_rn = s.stage_rn
+    from api_knockout_ranked as a
+    join seed_knockout_ranked as s
+        on
+            a.seed_stage = s.seed_stage
+            and a.stage_rn = s.stage_rn
 
 )
 
-select fixture_id, match_no from group_map
+select
+    fixture_id,
+    match_no
+from group_map
 union all
-select fixture_id, match_no from knockout_map
+select
+    fixture_id,
+    match_no
+from knockout_map

@@ -96,10 +96,14 @@ class FootballDataClient(BaseApiClient):
     def get_competition(self, code: str = "WC") -> dict[str, Any]:
         return self.get(f"competitions/{code}", {}, use_cache=False)
 
-    def get_matches(self, code: str = "WC", season: int = 2026, use_cache: bool = True) -> dict[str, Any]:
+    def get_matches(
+        self, code: str = "WC", season: int = 2026, use_cache: bool = True
+    ) -> dict[str, Any]:
         return self.get(f"competitions/{code}/matches", {"season": season}, use_cache=use_cache)
 
-    def get_standings(self, code: str = "WC", season: int = 2026, use_cache: bool = True) -> dict[str, Any]:
+    def get_standings(
+        self, code: str = "WC", season: int = 2026, use_cache: bool = True
+    ) -> dict[str, Any]:
         return self.get(f"competitions/{code}/standings", {"season": season}, use_cache=use_cache)
 
 

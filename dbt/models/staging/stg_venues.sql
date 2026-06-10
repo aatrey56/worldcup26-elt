@@ -4,7 +4,7 @@ with src as (
 
     select distinct
         venue as venue_name,
-        city  as city
+        city
     from {{ ref('stg_schedule') }}
 
 )
