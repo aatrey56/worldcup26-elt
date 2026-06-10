@@ -1,15 +1,11 @@
-# Python deps for the Astro Runtime image.
-# dbt-duckdb/duckdb pinned to versions verified locally (dbt-core 1.11.11).
-# astronomer-cosmos left to resolve at the Phase 3 build (Cosmos manages dbt in
-# its own venv inside the image); pin the exact Cosmos version then.
+# Python deps for the Astro Runtime image (the Airflow environment).
+# dbt itself is NOT here: it lives in an isolated venv built in the Dockerfile
+# (dbt and Airflow can have conflicting deps), and Cosmos runs it from there.
 
-# dbt-in-Airflow
-astronomer-cosmos
-dbt-duckdb==1.10.1
+# dbt-in-Airflow orchestration
+astronomer-cosmos==1.14.2
 
-# warehouse driver
+# used by the extract/load task (include/extract/load_raw.py)
 duckdb
-
-# extraction
 requests
 tenacity
