@@ -5,12 +5,16 @@ End-to-end ELT for the 2026 World Cup: Airflow (Astro) orchestrates dbt (via Cos
 served by an Evidence.dev dashboard. Live during the tournament (Jun 11 to Jul 19, 2026).
 
 ## Map
-- dags/                Airflow DAG (Cosmos DbtTaskGroup) + Slack callback
-- include/extract/      football-data.org client + idempotent raw loader (api_football.py kept as the 2022-2024 fallback)
-- include/data/raw/     cached raw JSON responses (gitignored)
-- dbt/                  staging -> intermediate -> marts (star schema) + tests + seeds
-- reports/              Evidence dashboard (reads the warehouse)
-- .github/workflows/    CI (lint + dbt build + test) and dbt docs publish
+- dags/                Airflow DAG (Cosmos DbtTaskGroup): load_raw -> load_fifa -> dbt build -> publish; Slack callback
+- include/extract/      football-data.org client + FIFA (api.fifa.com, free, shot x,y) client + idempotent loaders
+                        (base_client.py shared; raw_tables.py helpers; api_football.py is the 2022-2024 fallback)
+- include/data/raw/     cached raw JSON responses (gitignored); raw_sample/ committed for hermetic CI
+- ml/                   offline xG model training (train_xg.py); outputs the dbt/seeds/xg_model.csv coefficients
+                        (sklearn is dev-only; scoring is pure SQL in fct_shot)
+- dbt/                  staging -> intermediate -> marts (star schema) + 120 tests + seeds
+- reports/              Evidence dashboard (bracket, leaderboard, scorers, xg, shots, teams; reads the warehouse)
+- analysis/euro2024/    standalone StatsBomb xT/VAEP/carry analysis (own venv; not in the live pipeline)
+- .github/workflows/    ci.yml (lint + hermetic dbt build/test) and deploy.yml (live load + build + Pages cron every 6h)
 
 ## Stack
 Astro/Airflow 3.x, dbt-core + astronomer-cosmos, dbt-duckdb (swap to Snowflake/MotherDuck via
