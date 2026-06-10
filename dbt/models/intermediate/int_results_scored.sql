@@ -28,7 +28,7 @@ scored as (
     select
         fixture_id,
         kickoff_utc,
-        loaded_at,
+        last_updated,
         home_team,
         away_team,
         home_score,
@@ -71,7 +71,13 @@ select
     mm.match_no,
     sch.group_letter,
     s.kickoff_utc,
-    s.loaded_at                                as source_loaded_at,
+    -- FIX 6: source_loaded_at is the provider's lastUpdated (when the provider
+    -- last changed this match), NOT the loader's load timestamp. The loader
+    -- restamps loaded_at on every full-snapshot run, so using it would make the
+    -- fct_result incremental predicate reprocess ALL rows every run. lastUpdated
+    -- only advances when the provider actually changes the match (new result or
+    -- score correction), so the predicate re-pulls only genuinely changed rows.
+    s.last_updated                             as source_loaded_at,
     s.home_team,
     s.away_team,
     s.home_score,

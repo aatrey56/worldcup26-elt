@@ -40,10 +40,6 @@ class ApiFootballError(ApiClientError):
     """Raised when the API responds with a non-retryable error."""
 
 
-class ApiFootballTransientError(TransientApiError):
-    """Retryable API-Football failure (HTTP 429 or >= 500)."""
-
-
 class ApiFootballClient(BaseApiClient):
     def __init__(
         self,
@@ -66,9 +62,6 @@ class ApiFootballClient(BaseApiClient):
     def _auth_header(self) -> dict[str, str]:
         return {"x-apisports-key": self.api_key}
 
-    def _cache_prefix(self) -> str:
-        return ""
-
     def _read_rate_limit(self, resp: requests.Response) -> None:
         # Surface the daily quota so we never burn through 100 calls blind.
         remaining = resp.headers.get("x-ratelimit-requests-remaining")
@@ -80,7 +73,7 @@ class ApiFootballClient(BaseApiClient):
         if resp.status_code >= 400:
             detail = f"{resp.status_code} for {endpoint}: {resp.text}"
             if is_transient_status(resp.status_code):
-                raise ApiFootballTransientError(detail)
+                raise TransientApiError(detail)
             raise ApiFootballError(detail)
         payload = resp.json()
         errors = payload.get("errors")

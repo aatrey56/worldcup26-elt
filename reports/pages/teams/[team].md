@@ -7,7 +7,7 @@ select
   group_letter,
   is_host
 from warehouse.dim_team
-where fifa_code = '${params.team}'
+where upper(fifa_code) = upper('${params.team}')
 ```
 
 # <Value data={team_info} column=team_name />
@@ -31,7 +31,7 @@ select
 from warehouse.fct_group_standings s
 inner join warehouse.dim_team t
   on s.team_key = t.team_key
-where t.fifa_code = '${params.team}'
+where upper(t.fifa_code) = upper('${params.team}')
 ```
 
 {#if group_position.length > 0}
@@ -63,7 +63,7 @@ select
   m.kickoff_et,
   m.round_label,
   m.group_letter,
-  case when ht.fifa_code = '${params.team}' then 'Home' else 'Away' end as venue_side,
+  case when upper(ht.fifa_code) = upper('${params.team}') then 'Home' else 'Away' end as venue_side,
   ht.team_name as home_team,
   awt.team_name as away_team,
   m.channel_en,
@@ -73,8 +73,8 @@ inner join warehouse.dim_team ht
   on m.home_team_key = ht.team_key
 inner join warehouse.dim_team awt
   on m.away_team_key = awt.team_key
-where ht.fifa_code = '${params.team}'
-   or awt.fifa_code = '${params.team}'
+where upper(ht.fifa_code) = upper('${params.team}')
+   or upper(awt.fifa_code) = upper('${params.team}')
 order by m.match_no
 ```
 
@@ -114,8 +114,8 @@ inner join warehouse.dim_team ht
   on r.home_team_key = ht.team_key
 inner join warehouse.dim_team awt
   on r.away_team_key = awt.team_key
-where ht.fifa_code = '${params.team}'
-   or awt.fifa_code = '${params.team}'
+where upper(ht.fifa_code) = upper('${params.team}')
+   or upper(awt.fifa_code) = upper('${params.team}')
 order by m.match_no
 ```
 

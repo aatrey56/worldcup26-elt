@@ -42,6 +42,7 @@ extracted as (
         (payload -> '$.matchday')::int                        as matchday,
         (payload -> '$.homeTeam.id')::bigint                  as home_team_id,
         (payload -> '$.awayTeam.id')::bigint                  as away_team_id,
+        cast(payload ->> '$.lastUpdated' as timestamp)        as last_updated,
         loaded_at
     from src
 
@@ -62,6 +63,7 @@ select
     e.matchday,
     e.home_team_id,
     e.away_team_id,
+    e.last_updated,
     e.loaded_at
 from extracted e
 left join crosswalk hx on e.home_team_raw = hx.api_name

@@ -5,16 +5,24 @@
 -- deletes the incoming match_keys from the target, then inserts the new rows,
 -- so a corrected score replaces its existing row and never duplicates it.
 --
--- Incremental predicate: on incremental runs we only pull source rows whose
--- raw load timestamp is newer than the newest one already loaded. Because the
--- loader stamps a fresh loaded_at whenever a fixture is (re)landed, this picks
--- up BOTH brand-new finished matches AND corrections to already-loaded scores,
--- while skipping rows that have not changed. On the first run the table does
--- not exist, so is_incremental() is false and every finished match is loaded.
+-- Incremental predicate (FIX 6): on incremental runs we only pull source rows
+-- whose source_loaded_at is newer than the newest one already loaded.
+-- source_loaded_at is the PROVIDER'S lastUpdated timestamp (carried through
+-- int_results_scored), NOT the loader's load timestamp. The loader restamps its
+-- load timestamp on every full-snapshot run, so keying off it would reprocess
+-- ALL rows every run; lastUpdated only advances when the provider actually
+-- changes a match, so the predicate genuinely re-pulls only new finished
+-- matches and corrected scores, skipping unchanged rows. On the first run the
+-- table does not exist, so is_incremental() is false and every finished match
+-- is loaded.
 --
 -- match_key is obtained by joining int_results_scored to dim_match on the
 -- API fixture_id (int_results_scored.fixture_id = dim_match.match_id), the
 -- stable id-based reconciliation that works for both group and knockout rows.
+-- FIX 1: rows whose fixture_id does not reconcile to a dim_match (null
+-- match_key) are dropped here. delete+insert cannot dedupe on a null key, so a
+-- null-key row would accumulate; the unmapped_finished_results singular test
+-- fails loudly if a real finished result is ever dropped this way.
 
 {{
     config(
@@ -78,3 +86,4 @@ left join teams ht
     on r.home_team = ht.team_name
 left join teams awt
     on r.away_team = awt.team_name
+where m.match_key is not null

@@ -55,6 +55,16 @@ def validate_matches(matches: Any) -> list[dict[str, Any]]:
                 missing,
             )
             raise RawContractError(f"match at index {idx} missing keys: {missing}")
+    ids = [match["id"] for match in matches]
+    seen: set[Any] = set()
+    duplicates: list[Any] = []
+    for match_id in ids:
+        if match_id in seen and match_id not in duplicates:
+            duplicates.append(match_id)
+        seen.add(match_id)
+    if duplicates:
+        logger.error("matches contract violation: duplicate match id(s): %s", duplicates)
+        raise RawContractError(f"matches payload contains duplicate id(s): {duplicates}")
     return matches
 
 

@@ -47,6 +47,8 @@ models:
         description: "Tournament stage (e.g. GROUP_STAGE, LAST_16, FINAL)."
         tests:
           - not_null
+      - name: last_updated
+        description: "Provider's lastUpdated timestamp (payload.lastUpdated): when football-data.org last changed this match. Used as the incremental change-key for fct_result (source_loaded_at), so only matches the provider actually updated are reprocessed."
 
   - name: stg_standings
     description: "One row per team from the football-data.org v4 TOTAL standings table (JSON extracted). Auxiliary cross-check only."

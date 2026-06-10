@@ -80,8 +80,12 @@ aggregated as (
 
 select
     *,
+    -- FIX 5: team_name is appended as a final, deterministic tiebreaker so two
+    -- teams equal on points/gd/gf get a stable order that does not flip between
+    -- runs. (FIFA criteria 4-8 -- head-to-head and fair-play -- remain
+    -- documented-but-unimplemented above.)
     row_number() over (
         partition by group_letter
-        order by points desc, gd desc, gf desc
+        order by points desc, gd desc, gf desc, team_name
     ) as rank
 from aggregated

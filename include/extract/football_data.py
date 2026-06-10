@@ -41,10 +41,6 @@ class FootballDataError(ApiClientError):
     """Raised when football-data.org returns a non-retryable error response."""
 
 
-class FootballDataTransientError(TransientApiError):
-    """Retryable football-data.org failure (HTTP 429 or >= 500)."""
-
-
 class FootballDataClient(BaseApiClient):
     def __init__(
         self,
@@ -92,7 +88,7 @@ class FootballDataClient(BaseApiClient):
                 message = resp.text
             detail = f"{resp.status_code} for {endpoint}: {message}"
             if is_transient_status(resp.status_code):
-                raise FootballDataTransientError(detail)
+                raise TransientApiError(detail)
             raise FootballDataError(detail)
         return resp.json()
 

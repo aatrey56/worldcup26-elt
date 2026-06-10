@@ -1,11 +1,16 @@
 -- Grain: one row per team. Aggregates fct_result across home and away
 -- appearances into tournament-level totals.
 --
--- FIX 8: stage_reached is the FURTHEST stage a team actually reached, computed
--- from fct_result joined to dim_match.stage. Stages are ranked by tournament
--- order: group(1) < r32(2) < r16(3) < qf(4) < sf(5) < final(6). The
--- third-place play-off ('third') is a special case: a team only plays it after
--- losing a semi-final, so it is treated at the sf level (5). A team with no
+-- FIX 3/8: stage_reached is the FURTHEST stage a team actually reached,
+-- computed from fct_result joined to dim_match.stage. Stages are ranked by a
+-- STRICTLY DISTINCT tournament order so the label is deterministic:
+--   group(1) < r32(2) < r16(3) < qf(4) < sf(5) < third(6) < final(7).
+-- 'third' and 'sf' previously shared order 5, which made max_by non-
+-- deterministic for semi-final losers (it could return either label for the
+-- same max order). With distinct orders, a team that played the third-place
+-- match deterministically shows 'third' (order 6 > sf's 5), and the two
+-- finalists deterministically show 'final' (order 7). We pick the label by the
+-- single max stage_order, so there are no ties to break. A team with no
 -- finished matches yet defaults to 'group'.
 
 with results as (
@@ -69,8 +74,8 @@ ranked as (
             when 'r16'   then 3
             when 'qf'    then 4
             when 'sf'    then 5
-            when 'third' then 5
-            when 'final' then 6
+            when 'third' then 6
+            when 'final' then 7
             else 1
         end as stage_order
     from per_appearance
