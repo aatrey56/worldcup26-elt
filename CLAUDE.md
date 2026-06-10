@@ -6,7 +6,7 @@ served by an Evidence.dev dashboard. Live during the tournament (Jun 11 to Jul 1
 
 ## Map
 - dags/                Airflow DAG (Cosmos DbtTaskGroup) + Slack callback
-- include/extract/      API-Football client + idempotent raw loader
+- include/extract/      football-data.org client + idempotent raw loader (api_football.py kept as the 2022-2024 fallback)
 - include/data/raw/     cached raw JSON responses (gitignored)
 - dbt/                  staging -> intermediate -> marts (star schema) + tests + seeds
 - reports/              Evidence dashboard (reads the warehouse)

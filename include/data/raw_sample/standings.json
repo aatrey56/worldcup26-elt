@@ -1,44 +1,58 @@
 [
   {
-    "league": {
-      "id": 1,
-      "season": 2026,
-      "standings": [
-        [
-          {
-            "rank": 1,
-            "team": {"id": 2382, "name": "Mexico"},
-            "points": 3,
-            "goalsDiff": 1,
-            "group": "Group A",
-            "all": {"played": 1, "win": 1, "draw": 0, "lose": 0, "goals": {"for": 2, "against": 1}}
-          },
-          {
-            "rank": 2,
-            "team": {"id": 5000, "name": "Czechia"},
-            "points": 1,
-            "goalsDiff": 0,
-            "group": "Group A",
-            "all": {"played": 1, "win": 0, "draw": 1, "lose": 0, "goals": {"for": 1, "against": 1}}
-          },
-          {
-            "rank": 3,
-            "team": {"id": 1571, "name": "South Korea"},
-            "points": 1,
-            "goalsDiff": 0,
-            "group": "Group A",
-            "all": {"played": 1, "win": 0, "draw": 1, "lose": 0, "goals": {"for": 1, "against": 1}}
-          },
-          {
-            "rank": 4,
-            "team": {"id": 1531, "name": "South Africa"},
-            "points": 0,
-            "goalsDiff": -1,
-            "group": "Group A",
-            "all": {"played": 1, "win": 0, "draw": 0, "lose": 1, "goals": {"for": 1, "against": 2}}
-          }
-        ]
-      ]
-    }
+    "position": 1,
+    "team": {"id": 769, "name": "Mexico", "shortName": "Mexico", "tla": "MEX", "crest": "https://crests.football-data.org/769.svg"},
+    "playedGames": 1,
+    "form": "W",
+    "won": 1,
+    "draw": 0,
+    "lost": 0,
+    "points": 3,
+    "goalsFor": 2,
+    "goalsAgainst": 1,
+    "goalDifference": 1,
+    "group": "GROUP_A"
+  },
+  {
+    "position": 2,
+    "team": {"id": 924, "name": "Czechia", "shortName": "Czechia", "tla": "CZE", "crest": "https://crests.football-data.org/924.svg"},
+    "playedGames": 1,
+    "form": "D",
+    "won": 0,
+    "draw": 1,
+    "lost": 0,
+    "points": 1,
+    "goalsFor": 1,
+    "goalsAgainst": 1,
+    "goalDifference": 0,
+    "group": "GROUP_A"
+  },
+  {
+    "position": 3,
+    "team": {"id": 837, "name": "South Korea", "shortName": "South Korea", "tla": "KOR", "crest": "https://crests.football-data.org/837.svg"},
+    "playedGames": 1,
+    "form": "D",
+    "won": 0,
+    "draw": 1,
+    "lost": 0,
+    "points": 1,
+    "goalsFor": 1,
+    "goalsAgainst": 1,
+    "goalDifference": 0,
+    "group": "GROUP_A"
+  },
+  {
+    "position": 4,
+    "team": {"id": 1837, "name": "South Africa", "shortName": "South Africa", "tla": "RSA", "crest": "https://crests.football-data.org/1837.svg"},
+    "playedGames": 1,
+    "form": "L",
+    "won": 0,
+    "draw": 0,
+    "lost": 1,
+    "points": 0,
+    "goalsFor": 1,
+    "goalsAgainst": 2,
+    "goalDifference": -1,
+    "group": "GROUP_A"
   }
 ]

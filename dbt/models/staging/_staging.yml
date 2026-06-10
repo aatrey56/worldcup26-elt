@@ -20,19 +20,44 @@ models:
           - not_null
 
   - name: stg_matches
-    description: "One row per fixture from the API-Football v3 fixtures feed (JSON extracted)."
+    description: "One row per match from the football-data.org v4 matches feed (JSON extracted)."
     columns:
       - name: fixture_id
-        description: "API-Football fixture id."
+        description: "football-data.org match id."
         tests:
           - unique
           - not_null
+      - name: kickoff_utc
+        description: "Match kickoff in UTC, from utcDate."
+        tests:
+          - not_null
+      - name: status
+        description: "Raw football-data.org match status (e.g. TIMED, FINISHED)."
+        tests:
+          - not_null
+      - name: home_team
+        description: "Home team name (homeTeam.name). Null for undetermined knockout fixtures pre-tournament."
+      - name: away_team
+        description: "Away team name (awayTeam.name). Null for undetermined knockout fixtures pre-tournament."
+      - name: stage
+        description: "Tournament stage (e.g. GROUP_STAGE, LAST_16, FINAL)."
+        tests:
+          - not_null
 
   - name: stg_standings
-    description: "One row per team-in-group from the API-Football v3 standings feed (JSON extracted)."
+    description: "One row per team from the football-data.org v4 TOTAL standings table (JSON extracted). Auxiliary cross-check only."
     columns:
       - name: team_id
-        description: "API-Football team id."
+        description: "football-data.org team id."
+        tests:
+          - unique
+          - not_null
+      - name: team_name
+        description: "Team name (team.name)."
+        tests:
+          - not_null
+      - name: points
+        description: "Total points."
         tests:
           - not_null
 

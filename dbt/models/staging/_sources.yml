@@ -2,26 +2,24 @@ version: 2
 
 sources:
   - name: raw
-    description: "Raw landing zone loaded by the EL ingest (Phase 1). One row per API-Football v3 object, stored as JSON."
+    description: "Raw landing zone loaded by the EL ingest (Phase 1). One row per football-data.org v4 object, stored as JSON."
     schema: raw
     tables:
       - name: fixtures
-        description: "One row per fixture. payload is the full API-Football v3 fixture object."
+        description: "One row per match. payload is the full football-data.org v4 match object."
         columns:
           - name: fixture_id
-            description: "API-Football fixture id."
+            description: "football-data.org match id."
           - name: payload
-            description: "Full v3 fixture JSON object."
+            description: "Full v4 match JSON object."
           - name: loaded_at
             description: "Ingest timestamp."
       - name: standings
-        description: "One row per team-in-group. payload is a v3 standings entry."
+        description: "One row per team from the football-data.org v4 TOTAL standings table. payload is the table row with group injected."
         columns:
           - name: team_id
-            description: "API-Football team id."
-          - name: group_label
-            description: "Group label (e.g. Group A)."
+            description: "football-data.org team id."
           - name: payload
-            description: "Full v3 standings entry JSON object."
+            description: "Standings table-row JSON object (group injected by loader)."
           - name: loaded_at
             description: "Ingest timestamp."

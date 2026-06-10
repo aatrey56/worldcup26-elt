@@ -10,7 +10,7 @@ schema, and serves an Evidence.dev dashboard that refreshes daily during the tou
 
 ```mermaid
 flowchart LR
-    api[API-Football<br/>live data] -->|extract, cached| raw[(raw JSON<br/>on disk)]
+    api[football-data.org<br/>live data] -->|extract, cached| raw[(raw JSON<br/>on disk)]
     seed[schedule_seed.csv<br/>104 matches] --> dbt
     raw -->|idempotent load| duck[(DuckDB<br/>raw schema)]
     duck --> dbt[dbt via Cosmos<br/>staging - intermediate - marts<br/>+ quality tests]

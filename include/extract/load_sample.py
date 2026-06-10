@@ -1,11 +1,17 @@
 """Load committed sample API responses into the DuckDB raw schema.
 
 This populates raw.fixtures and raw.standings from include/data/raw_sample/*.json
-so dbt can build and CI stays hermetic without a live API key. The real
-API-backed loader (Phase 1) lands the same raw shape from live responses.
+so dbt can build and CI stays hermetic without a live API key. The samples use
+the football-data.org v4 match/standings shape, identical to what the live
+loader (include/extract/load_raw.py) lands, so both paths exercise the same
+staging logic.
 
-Idempotent: re-running deletes-then-inserts on the natural key, so row counts
-stay stable. Run with the project venv:  python -m include.extract.load_sample
+  fixtures.json   list of football-data.org v4 match objects.
+  standings.json  list of TOTAL standings table-rows, each with group injected
+                  (the exact row shape the live loader stores).
+
+Idempotent: delete-then-insert on the primary key, so row counts stay stable.
+Run with the project venv:  python -m include.extract.load_sample
 """
 
 from __future__ import annotations
@@ -36,8 +42,8 @@ def _load_json(name: str) -> list[dict]:
 
 
 def load_fixtures(con: duckdb.DuckDBPyConnection, loaded_at: datetime) -> int:
-    """Land one row per fixture: (fixture_id, payload JSON, loaded_at)."""
-    fixtures = _load_json("fixtures.json")
+    """Land one row per match: (fixture_id, payload JSON, loaded_at)."""
+    matches = _load_json("fixtures.json")
     con.execute(
         """
         create table if not exists raw.fixtures (
@@ -47,45 +53,60 @@ def load_fixtures(con: duckdb.DuckDBPyConnection, loaded_at: datetime) -> int:
         )
         """
     )
-    rows = [(f["fixture"]["id"], json.dumps(f), loaded_at) for f in fixtures]
-    ids = [r[0] for r in rows]
-    con.executemany("delete from raw.fixtures where fixture_id = ?", [(i,) for i in ids])
+    rows = [(int(m["id"]), json.dumps(m), loaded_at) for m in matches]
+    # Full-snapshot replace so the sample set fully owns the table and switching
+    # between sample and live loads never leaves orphan rows behind.
+    con.execute("delete from raw.fixtures")
     con.executemany("insert into raw.fixtures values (?, ?, ?)", rows)
     return len(rows)
 
 
 def load_standings(con: duckdb.DuckDBPyConnection, loaded_at: datetime) -> int:
-    """Explode nested standings into one row per (team_id, group_label)."""
-    payloads = _load_json("standings.json")
+    """Land one row per team: (team_id, payload JSON, loaded_at).
+
+    payload is the TOTAL standings table-row with group injected.
+    """
+    rows_json = _load_json("standings.json")
     con.execute(
         """
         create table if not exists raw.standings (
-            team_id     bigint,
-            group_label varchar,
-            payload     json,
-            loaded_at   timestamp,
-            primary key (team_id, group_label)
+            team_id    bigint primary key,
+            payload    json,
+            loaded_at  timestamp
         )
         """
     )
-    rows: list[tuple] = []
-    for block in payloads:
-        for group in block["league"]["standings"]:
-            for entry in group:
-                rows.append(
-                    (
-                        entry["team"]["id"],
-                        entry["group"],
-                        json.dumps(entry),
-                        loaded_at,
-                    )
-                )
-    keys = [(r[0], r[1]) for r in rows]
-    con.executemany(
-        "delete from raw.standings where team_id = ? and group_label = ?", keys
-    )
-    con.executemany("insert into raw.standings values (?, ?, ?, ?)", rows)
+    rows = [(int(r["team"]["id"]), json.dumps(r), loaded_at) for r in rows_json]
+    # Full-snapshot replace, same rationale as fixtures.
+    con.execute("delete from raw.standings")
+    con.executemany("insert into raw.standings values (?, ?, ?)", rows)
     return len(rows)
+
+
+def _align_standings_schema(con: duckdb.DuckDBPyConnection) -> None:
+    """Drop a legacy raw.standings table if it has the old wider schema.
+
+    The original API-Football loader created raw.standings with a group_label
+    column. The football-data.org shape stores group inside the payload, so we
+    rebuild the table with the (team_id, payload, loaded_at) schema staging now
+    expects. Safe because load_standings fully repopulates it.
+    """
+    exists = con.execute(
+        "select count(*) from information_schema.tables "
+        "where table_schema = 'raw' and table_name = 'standings'"
+    ).fetchone()[0]
+    if not exists:
+        return
+    cols = [
+        r[0]
+        for r in con.execute(
+            "select column_name from information_schema.columns "
+            "where table_schema = 'raw' and table_name = 'standings'"
+        ).fetchall()
+    ]
+    if "group_label" in cols:
+        logger.info("dropping legacy raw.standings (had group_label column)")
+        con.execute("drop table raw.standings")
 
 
 def main() -> None:
@@ -95,6 +116,7 @@ def main() -> None:
     con = duckdb.connect(db)
     try:
         con.execute("create schema if not exists raw")
+        _align_standings_schema(con)
         n_fix = load_fixtures(con, loaded_at)
         n_std = load_standings(con, loaded_at)
         logger.info("raw.fixtures: %d rows, raw.standings: %d rows", n_fix, n_std)

@@ -1,4 +1,4 @@
--- Grain: one row per FINISHED match (status_short = 'FT').
+-- Grain: one row per FINISHED match (status = 'FINISHED').
 -- Derives result and points, then attaches match_no/group_letter from the
 -- schedule by joining on the (home_team, away_team) name pair only.
 -- NOTE: we deliberately do NOT join on date. The seed date is ET local while
@@ -8,7 +8,7 @@ with matches as (
 
     select *
     from {{ ref('stg_matches') }}
-    where status_short = 'FT'
+    where status = 'FINISHED'
 
 ),
 
