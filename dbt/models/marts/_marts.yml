@@ -187,3 +187,95 @@ models:
         description: "Sum of the team's own shot xG."
       - name: xg_against
         description: "Sum of opponents' shot xG in the team's matches."
+
+  # --- Phase 3: live-feature supporting marts ---
+  - name: dim_fifa_team
+    description: "One row per FIFA team_id seen in the FIFA calendar feed. The FIFA-side team dimension (separate id system from dim_team) so FIFA shot/xG/top-scorer marts can show a readable team_name. Deduped to one coherent row per team_id. Empty pre-tournament if no FIFA matches are loaded."
+    columns:
+      - name: team_id
+        description: "FIFA IdTeam."
+        tests:
+          - unique
+          - not_null
+      - name: team_name
+        description: "Team (country) name from the FIFA feed."
+
+  - name: agg_top_scorers
+    description: "The golden-boot race: one row per player in the FIFA season top-scorers feed, with team_name resolved via dim_fifa_team. Ordered by goals desc, assists desc, player_name. Empty pre-tournament (0 rows in the feed)."
+    columns:
+      - name: player_id
+        description: "FIFA IdPlayer."
+        tests:
+          - unique:
+              config:
+                where: "player_id is not null"
+      - name: team_id
+        description: "FIFA IdTeam (FK to dim_fifa_team). dim_fifa_team is built from match line-ups in stg_fifa_matches, so a scorer's team resolves only once that team has appeared in a loaded match. On the live path every scorer's team has played; on the trimmed sample the top-scorers feed can reference teams not in the 2 sampled matches, so this FK is asserted at warn severity rather than failing the partial-sample build."
+        tests:
+          - relationships:
+              to: ref('dim_fifa_team')
+              field: team_id
+              config:
+                where: "team_id is not null"
+                severity: warn
+      - name: goals
+        description: "Goals scored this tournament."
+      - name: assists
+        description: "Assists this tournament (from the feed)."
+
+  - name: agg_team_leaderboard
+    description: "Best-performing-teams board on the football-data side. One row per real team (all 48 always present via a LEFT JOIN from dim_team, so the board is never empty pre-tournament). Stats from agg_team_tournament (coalesced to 0), group rank/qualification from fct_group_standings, plus a deterministic overall_rank over points/gd/gf/team_name."
+    columns:
+      - name: team_key
+        description: "FK to dim_team (surrogate key)."
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              to: ref('dim_team')
+              field: team_key
+      - name: overall_rank
+        description: "1-based tournament ranking over points desc, gd desc, gf desc, team_name asc (deterministic tiebreak)."
+        tests:
+          - unique
+          - not_null
+      - name: team_name
+        description: "Country name."
+        tests:
+          - not_null
+      - name: group_letter
+        description: "Group A..L this team plays in."
+      - name: qualified_flag
+        description: "Whether the team has qualified for the knockout stage (false until its group is complete)."
+      - name: stage_reached
+        description: "Furthest stage the team has reached ('group' if no finished matches yet)."
+
+  - name: fct_bracket
+    description: "One row per knockout match (dim_match where stage != 'group'; 32 rows). The bracket tree. home_label/away_label resolve to the real team name once the feeding match is played (via fct_result -> dim_team) else fall back to the stg_schedule placeholder text. Scores/winner_label are null until played. Always 32 placeholder rows pre-tournament."
+    columns:
+      - name: match_no
+        description: "Schedule match number (stable id for the fixture)."
+        tests:
+          - unique
+          - not_null
+      - name: match_key
+        description: "FK to dim_match (surrogate key)."
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              to: ref('dim_match')
+              field: match_key
+      - name: stage
+        description: "Knockout stage (never 'group')."
+        tests:
+          - accepted_values:
+              values: ['r32', 'r16', 'qf', 'sf', 'third', 'final']
+      - name: home_label
+        description: "Resolved home team name if the match is played, else the schedule placeholder text (e.g. 'Winner Group A')."
+        tests:
+          - not_null
+      - name: away_label
+        description: "Resolved away team name if the match is played, else the schedule placeholder text."
+        tests:
+          - not_null

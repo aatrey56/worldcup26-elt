@@ -48,7 +48,7 @@ lineup_dedup as (
                     match_id desc
             ) as rn
         from lineup_players
-    )
+    ) as ranked
     where rn = 1
 
 ),
