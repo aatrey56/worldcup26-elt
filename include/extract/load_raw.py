@@ -9,8 +9,9 @@ into the existing raw table shapes that staging depends on:
         one row per team from the TOTAL standings table only, payload = the
         table row with the parent entry's "group" injected (may be null).
 
-Idempotent: delete-then-insert on the primary key, so re-running yields the
-same row counts. Run with the project venv after loading .env:
+The raw-table DDL, idempotent full-snapshot replace, row shaping, the legacy
+schema migration, and payload validation all live in include.extract.raw_tables
+and are shared with the sample loader. Run with the project venv after .env:
 
     set -a; . ./.env; set +a
     python -m include.extract.load_raw
@@ -18,7 +19,6 @@ same row counts. Run with the project venv after loading .env:
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 import time
@@ -29,6 +29,12 @@ from typing import Any
 import duckdb
 
 from include.extract.football_data import FootballDataClient
+from include.extract.raw_tables import (
+    align_standings_schema,
+    replace_fixtures,
+    replace_standings,
+    validate_matches,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("load_raw")
@@ -77,26 +83,8 @@ def load_fixtures(
     """Land one row per match: (fixture_id, payload JSON, loaded_at)."""
     _throttle_if_low(client)
     response = client.get_matches(_competition(), _season(), use_cache=False)
-    matches: list[dict[str, Any]] = response.get("matches", [])
-
-    con.execute(
-        """
-        create table if not exists raw.fixtures (
-            fixture_id bigint primary key,
-            payload    json,
-            loaded_at  timestamp
-        )
-        """
-    )
-
-    rows = [(int(m["id"]), json.dumps(m), loaded_at) for m in matches]
-    # Full-snapshot replace: the feed is the complete set of WC matches, so we
-    # clear the table first. This keeps the load idempotent (stable row counts)
-    # and prevents stale rows (e.g. sample data, or matches dropped upstream)
-    # from lingering and fanning out downstream joins.
-    con.execute("delete from raw.fixtures")
-    con.executemany("insert into raw.fixtures values (?, ?, ?)", rows)
-    return len(rows)
+    matches: list[dict[str, Any]] = validate_matches(response.get("matches"))
+    return replace_fixtures(con, matches, loaded_at)
 
 
 def load_standings(
@@ -112,17 +100,7 @@ def load_standings(
     response = client.get_standings(_competition(), _season(), use_cache=False)
     entries: list[dict[str, Any]] = response.get("standings", [])
 
-    con.execute(
-        """
-        create table if not exists raw.standings (
-            team_id    bigint primary key,
-            payload    json,
-            loaded_at  timestamp
-        )
-        """
-    )
-
-    rows: list[tuple[int, str, datetime]] = []
+    table_rows: list[dict[str, Any]] = []
     for entry in entries:
         if entry.get("type") != "TOTAL":
             continue
@@ -130,40 +108,9 @@ def load_standings(
         for table_row in entry.get("table", []):
             row = dict(table_row)
             row["group"] = group
-            team_id = int(row["team"]["id"])
-            rows.append((team_id, json.dumps(row), loaded_at))
+            table_rows.append(row)
 
-    # Full-snapshot replace, same rationale as fixtures: the TOTAL table is the
-    # complete set of teams, so clear then load for idempotent, orphan-free runs.
-    con.execute("delete from raw.standings")
-    con.executemany("insert into raw.standings values (?, ?, ?)", rows)
-    return len(rows)
-
-
-def _align_standings_schema(con: duckdb.DuckDBPyConnection) -> None:
-    """Drop a legacy raw.standings table if it has the old wider schema.
-
-    The original API-Football loader created raw.standings with a group_label
-    column. The football-data.org shape stores group inside the payload, so we
-    rebuild the table with the (team_id, payload, loaded_at) schema staging now
-    expects. This is safe because the loader fully repopulates it below.
-    """
-    exists = con.execute(
-        "select count(*) from information_schema.tables "
-        "where table_schema = 'raw' and table_name = 'standings'"
-    ).fetchone()[0]
-    if not exists:
-        return
-    cols = [
-        r[0]
-        for r in con.execute(
-            "select column_name from information_schema.columns "
-            "where table_schema = 'raw' and table_name = 'standings'"
-        ).fetchall()
-    ]
-    if "group_label" in cols:
-        logger.info("dropping legacy raw.standings (had group_label column)")
-        con.execute("drop table raw.standings")
+    return replace_standings(con, table_rows, loaded_at)
 
 
 def main() -> None:
@@ -174,7 +121,7 @@ def main() -> None:
     con = duckdb.connect(db)
     try:
         con.execute("create schema if not exists raw")
-        _align_standings_schema(con)
+        align_standings_schema(con)
         n_fix = load_fixtures(con, client, loaded_at)
         n_std = load_standings(con, client, loaded_at)
         logger.info("raw.fixtures: %d rows, raw.standings: %d rows", n_fix, n_std)

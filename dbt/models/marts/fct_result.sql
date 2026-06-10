@@ -13,7 +13,8 @@
 -- not exist, so is_incremental() is false and every finished match is loaded.
 --
 -- match_key is obtained by joining int_results_scored to dim_match on the
--- (home_team, away_team) name pair.
+-- API fixture_id (int_results_scored.fixture_id = dim_match.match_id), the
+-- stable id-based reconciliation that works for both group and knockout rows.
 
 {{
     config(
@@ -29,14 +30,21 @@ with results as (
     from {{ ref('int_results_scored') }}
 
     {% if is_incremental() %}
-    where source_loaded_at > (select max(source_loaded_at) from {{ this }})
+    -- coalesce guards the empty-table case: before any match has finished the
+    -- table exists but is empty, so max(...) is NULL and `x > NULL` would filter
+    -- out the FIRST results to ever arrive. Fall back to a floor timestamp so
+    -- the first finished matches load.
+    where source_loaded_at > (
+        select coalesce(max(source_loaded_at), timestamp '1900-01-01')
+        from {{ this }}
+    )
     {% endif %}
 
 ),
 
 matches as (
 
-    select match_key, match_no
+    select match_key, match_id
     from {{ ref('dim_match') }}
 
 ),
@@ -65,7 +73,7 @@ select
     current_timestamp                          as loaded_at
 from results r
 left join matches m
-    on r.match_no = m.match_no
+    on r.fixture_id = m.match_id
 left join teams ht
     on r.home_team = ht.team_name
 left join teams awt

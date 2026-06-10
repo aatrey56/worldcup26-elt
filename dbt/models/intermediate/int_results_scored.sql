@@ -1,14 +1,25 @@
--- Grain: one row per FINISHED match (status = 'FINISHED').
--- Derives result and points, then attaches match_no/group_letter from the
--- schedule by joining on the (home_team, away_team) name pair only.
--- NOTE: we deliberately do NOT join on date. The seed date is ET local while
--- the API date is UTC, so they can differ by a day across midnight.
+-- Grain: one row per genuinely SCORED match.
+-- A match counts as scored only when status = 'FINISHED' AND both fullTime
+-- scores are non-null (FIX 6): a FINISHED match with null scores (awarded /
+-- abandoned) is excluded rather than mislabelled as a 0-0 draw.
+--
+-- Derives result and points, then attaches match_no / group_letter via the
+-- stable fixture_id reconciliation (int_match_map), NOT the old fragile
+-- (home_team, away_team) name-pair join (FIX 1/4/7). The id-based path lands
+-- knockout results and survives name drift.
+--
+-- Materialized as a table: it is recomputed by several downstream models
+-- (fct_result, int_group_table), so we compute it once.
+
+{{ config(materialized='table') }}
 
 with matches as (
 
     select *
     from {{ ref('stg_matches') }}
     where status = 'FINISHED'
+      and home_score is not null
+      and away_score is not null
 
 ),
 
@@ -41,21 +52,23 @@ scored as (
 
 ),
 
+match_map as (
+
+    select fixture_id, match_no
+    from {{ ref('int_match_map') }}
+
+),
+
 schedule as (
 
-    select
-        match_no,
-        group_letter,
-        home_team,
-        away_team
+    select match_no, group_letter
     from {{ ref('stg_schedule') }}
-    where not is_placeholder
 
 )
 
 select
     s.fixture_id,
-    sch.match_no,
+    mm.match_no,
     sch.group_letter,
     s.kickoff_utc,
     s.loaded_at                                as source_loaded_at,
@@ -67,6 +80,7 @@ select
     s.home_points,
     s.away_points
 from scored s
+left join match_map mm
+    on s.fixture_id = mm.fixture_id
 left join schedule sch
-    on s.home_team = sch.home_team
-   and s.away_team = sch.away_team
+    on mm.match_no = sch.match_no

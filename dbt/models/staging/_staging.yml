@@ -36,9 +36,13 @@ models:
         tests:
           - not_null
       - name: home_team
-        description: "Home team name (homeTeam.name). Null for undetermined knockout fixtures pre-tournament."
+        description: "Home team name (homeTeam.name), crosswalk-canonicalized. Null for undetermined knockout fixtures pre-tournament."
       - name: away_team
-        description: "Away team name (awayTeam.name). Null for undetermined knockout fixtures pre-tournament."
+        description: "Away team name (awayTeam.name), crosswalk-canonicalized. Null for undetermined knockout fixtures pre-tournament."
+      - name: home_team_tla
+        description: "Home team three-letter FIFA code (homeTeam.tla, e.g. MEX)."
+      - name: away_team_tla
+        description: "Away team three-letter FIFA code (awayTeam.tla, e.g. KOR)."
       - name: stage
         description: "Tournament stage (e.g. GROUP_STAGE, LAST_16, FINAL)."
         tests:
@@ -53,22 +57,28 @@ models:
           - unique
           - not_null
       - name: team_name
-        description: "Team name (team.name)."
+        description: "Team name (team.name), crosswalk-canonicalized."
         tests:
           - not_null
+      - name: team_tla
+        description: "Team three-letter FIFA code (team.tla)."
+      - name: group_label
+        description: "Bare group letter A..L (the API 'GROUP_' prefix is stripped to match every other model)."
       - name: points
         description: "Total points."
         tests:
           - not_null
 
   - name: stg_teams
-    description: "One row per real team (country) in the schedule, with optional API team_id."
+    description: "One row per real team (country) in the schedule, with optional API team_id and fifa_code (tla)."
     columns:
       - name: team_name
         description: "Country name as it appears in the schedule seed."
         tests:
           - unique
           - not_null
+      - name: fifa_code
+        description: "Three-letter FIFA code (API tla) for the team, from the fixtures or standings feed; null until the team is seen."
 
   - name: stg_venues
     description: "One row per distinct (venue, city) pair in the schedule."

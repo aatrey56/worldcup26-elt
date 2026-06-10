@@ -27,14 +27,17 @@ with group_results as (
 
 per_team as (
 
-    -- one row per team appearance (home side)
+    -- one row per team appearance (home side). won/drawn/lost are derived
+    -- from the points column already produced by int_results_scored
+    -- (3 = win, 1 = draw, 0 = loss) rather than re-deriving them from the
+    -- result string, removing the duplicated win/draw/loss logic.
     select
         group_letter,
         home_team as team_name,
         1                                          as played,
-        case when result = 'home_win' then 1 else 0 end as won,
-        case when result = 'draw' then 1 else 0 end as drawn,
-        case when result = 'away_win' then 1 else 0 end as lost,
+        case when home_points = 3 then 1 else 0 end as won,
+        case when home_points = 1 then 1 else 0 end as drawn,
+        case when home_points = 0 then 1 else 0 end as lost,
         home_score                                 as gf,
         away_score                                 as ga,
         home_points                                as points
@@ -47,9 +50,9 @@ per_team as (
         group_letter,
         away_team as team_name,
         1                                          as played,
-        case when result = 'away_win' then 1 else 0 end as won,
-        case when result = 'draw' then 1 else 0 end as drawn,
-        case when result = 'home_win' then 1 else 0 end as lost,
+        case when away_points = 3 then 1 else 0 end as won,
+        case when away_points = 1 then 1 else 0 end as drawn,
+        case when away_points = 0 then 1 else 0 end as lost,
         away_score                                 as gf,
         home_score                                 as ga,
         away_points                                as points

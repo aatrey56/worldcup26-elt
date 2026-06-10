@@ -1,7 +1,8 @@
 -- Grain: one row per real team (country) appearing in the schedule.
 -- Built from the union of home/away teams in stg_schedule, EXCLUDING
 -- placeholder knockout slots. Left joins stg_matches to attach an API
--- team_id when the team has been seen in the fixtures feed (else null).
+-- team_id and the FIFA three-letter code (tla) when the team has been seen
+-- in the fixtures or standings feed (else null).
 
 with schedule_teams as (
 
@@ -24,14 +25,24 @@ distinct_teams as (
 
 ),
 
-api_ids as (
+api_attrs as (
 
-    -- collapse home and away appearances into one id per team_name
-    select team_name, max(team_id) as team_id
+    -- collapse home and away appearances into one id + fifa_code per team_name.
+    -- The fifa_code (tla) can come from either the fixtures feed or the
+    -- standings feed; max() picks the single non-null code per team.
+    select
+        team_name,
+        max(team_id)  as team_id,
+        max(team_tla) as fifa_code
     from (
-        select home_team as team_name, home_team_id as team_id from {{ ref('stg_matches') }}
+        select home_team as team_name, home_team_id as team_id, home_team_tla as team_tla
+        from {{ ref('stg_matches') }}
         union all
-        select away_team as team_name, away_team_id as team_id from {{ ref('stg_matches') }}
+        select away_team as team_name, away_team_id as team_id, away_team_tla as team_tla
+        from {{ ref('stg_matches') }}
+        union all
+        select team_name, team_id, team_tla
+        from {{ ref('stg_standings') }}
     )
     group by team_name
 
@@ -39,7 +50,8 @@ api_ids as (
 
 select
     t.team_name,
-    a.team_id
+    a.team_id,
+    a.fifa_code
 from distinct_teams t
-left join api_ids a
+left join api_attrs a
     on t.team_name = a.team_name

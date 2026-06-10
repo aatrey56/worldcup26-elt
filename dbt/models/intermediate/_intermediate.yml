@@ -1,0 +1,40 @@
+version: 2
+
+models:
+  - name: int_match_map
+    description: >
+      One row per API fixture mapping fixture_id to its seed match_no. Group
+      matches are matched on the unordered team set (either orientation);
+      knockout matches are matched by chronological position within each stage.
+      This is the single id-based reconciliation point between the live feed and
+      the schedule seed. The match_map_is_one_to_one singular test asserts the
+      mapping is 1:1 in both directions.
+    columns:
+      - name: fixture_id
+        description: "football-data.org match id."
+        tests:
+          - unique
+          - not_null
+      - name: match_no
+        description: "Seed match number (1..104) this fixture reconciles to."
+        tests:
+          - unique
+          - not_null
+
+  - name: int_results_scored
+    description: >
+      One row per genuinely scored match (status = FINISHED and both fullTime
+      scores non-null). Carries fixture_id plus the reconciled match_no and
+      group_letter, with derived result and points.
+    columns:
+      - name: fixture_id
+        description: "football-data.org match id."
+        tests:
+          - unique
+          - not_null
+
+  - name: int_group_table
+    description: >
+      One row per (group_letter, team), recomputed from finished group matches.
+      won/drawn/lost are derived from the points column; ranked within each group
+      by points, goal difference, goals scored.

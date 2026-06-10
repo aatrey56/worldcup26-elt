@@ -7,6 +7,11 @@
 -- silently drop those nations' matches from dim_match and from results.
 -- COUPLING NOTE: every JSON path assumes the football-data.org v4 match shape.
 -- Re-verify against the live API if the provider/version changes.
+-- Materialized as a table: it is re-parsed/recomputed by several downstream
+-- models (int_match_map, int_results_scored, dim_match, stg_teams), so paying
+-- the JSON parse once is cheaper than re-parsing per reference.
+
+{{ config(materialized='table') }}
 
 with src as (
 
@@ -28,6 +33,8 @@ extracted as (
         payload ->> '$.status'                                 as status,
         payload ->> '$.homeTeam.name'                          as home_team_raw,
         payload ->> '$.awayTeam.name'                          as away_team_raw,
+        payload ->> '$.homeTeam.tla'                            as home_team_tla,
+        payload ->> '$.awayTeam.tla'                            as away_team_tla,
         (payload -> '$.score.fullTime.home')::int             as home_score,
         (payload -> '$.score.fullTime.away')::int             as away_score,
         payload ->> '$.stage'                                  as stage,
@@ -46,6 +53,8 @@ select
     e.status,
     coalesce(hx.seed_name, e.home_team_raw)               as home_team,
     coalesce(ax.seed_name, e.away_team_raw)               as away_team,
+    e.home_team_tla,
+    e.away_team_tla,
     e.home_score,
     e.away_score,
     e.stage,

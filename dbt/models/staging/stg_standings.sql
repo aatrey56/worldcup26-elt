@@ -20,6 +20,7 @@ crosswalk as (
 select
     src.team_id,
     coalesce(cw.seed_name, src.payload ->> '$.team.name') as team_name,
+    src.payload ->> '$.team.tla'                as team_tla,
     (src.payload -> '$.position')::int          as position,
     (src.payload -> '$.playedGames')::int       as played_games,
     (src.payload -> '$.won')::int               as won,
@@ -29,7 +30,10 @@ select
     (src.payload -> '$.goalsFor')::int          as goals_for,
     (src.payload -> '$.goalsAgainst')::int      as goals_against,
     (src.payload -> '$.goalDifference')::int    as goal_difference,
-    src.payload ->> '$.group'                   as group_label,
+    -- FIX 9: the API emits 'GROUP_A'..'GROUP_L'; every other model uses the
+    -- bare letter 'A'..'L'. Strip the 'GROUP_' prefix so the auxiliary
+    -- standings cross-check can join the recomputed marts on group.
+    replace(src.payload ->> '$.group', 'GROUP_', '') as group_label,
     src.loaded_at
 from src
 left join crosswalk cw

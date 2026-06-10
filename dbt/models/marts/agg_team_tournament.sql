@@ -1,7 +1,12 @@
 -- Grain: one row per team. Aggregates fct_result across home and away
 -- appearances into tournament-level totals.
--- stage_reached is best-effort ('group') in this phase: knockout progression
--- requires bracket resolution not yet modelled.
+--
+-- FIX 8: stage_reached is the FURTHEST stage a team actually reached, computed
+-- from fct_result joined to dim_match.stage. Stages are ranked by tournament
+-- order: group(1) < r32(2) < r16(3) < qf(4) < sf(5) < final(6). The
+-- third-place play-off ('third') is a special case: a team only plays it after
+-- losing a semi-final, so it is treated at the sf level (5). A team with no
+-- finished matches yet defaults to 'group'.
 
 with results as (
 
@@ -10,29 +15,65 @@ with results as (
 
 ),
 
+match_stage as (
+
+    select match_key, stage
+    from {{ ref('dim_match') }}
+
+),
+
+results_staged as (
+
+    select r.*, m.stage
+    from results r
+    left join match_stage m
+        on r.match_key = m.match_key
+
+),
+
 per_appearance as (
 
     select
         home_team_key as team_key,
+        stage,
         home_score    as gf,
         away_score    as ga,
         case when result = 'home_win' then 1 else 0 end as win,
         case when result = 'draw' then 1 else 0 end     as draw,
         case when result = 'away_win' then 1 else 0 end as loss,
         case when result = 'home_win' then 3 when result = 'draw' then 1 else 0 end as points
-    from results
+    from results_staged
 
     union all
 
     select
         away_team_key as team_key,
+        stage,
         away_score    as gf,
         home_score    as ga,
         case when result = 'away_win' then 1 else 0 end as win,
         case when result = 'draw' then 1 else 0 end     as draw,
         case when result = 'home_win' then 1 else 0 end as loss,
         case when result = 'away_win' then 3 when result = 'draw' then 1 else 0 end as points
-    from results
+    from results_staged
+
+),
+
+ranked as (
+
+    select
+        *,
+        case stage
+            when 'group' then 1
+            when 'r32'   then 2
+            when 'r16'   then 3
+            when 'qf'    then 4
+            when 'sf'    then 5
+            when 'third' then 5
+            when 'final' then 6
+            else 1
+        end as stage_order
+    from per_appearance
 
 )
 
@@ -46,7 +87,10 @@ select
     sum(ga)                as ga,
     sum(gf) - sum(ga)      as gd,
     sum(points)            as points,
-    'group'                as stage_reached
-from per_appearance
+    coalesce(
+        max_by(stage, stage_order),
+        'group'
+    )                      as stage_reached
+from ranked
 where team_key is not null
 group by team_key

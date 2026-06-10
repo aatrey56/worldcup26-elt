@@ -1,7 +1,9 @@
--- Grain: one row per scheduled match (exactly 104).
+-- Grain: one row per scheduled match (exactly 104), keyed by match_no/match_key.
 -- home_team_key / away_team_key are NULL for placeholder knockout slots
 -- (we only join dim_team for real country names). match_id is the API
--- fixture id when the match has been seen in the fixtures feed (else null).
+-- fixture id, sourced from int_match_map by match_no (a stable id-based
+-- reconciliation that works for both group and knockout rows). It is null
+-- when the match has not yet been seen in the fixtures feed.
 
 with schedule as (
 
@@ -10,10 +12,10 @@ with schedule as (
 
 ),
 
-matches as (
+match_map as (
 
-    select home_team, away_team, fixture_id
-    from {{ ref('stg_matches') }}
+    select fixture_id, match_no
+    from {{ ref('int_match_map') }}
 
 ),
 
@@ -34,7 +36,7 @@ venues as (
 select
     {{ dbt_utils.generate_surrogate_key(['s.match_no']) }} as match_key,
     s.match_no,
-    m.fixture_id        as match_id,
+    mm.fixture_id       as match_id,
     s.match_date,
     s.kickoff_et,
     s.stage,
@@ -52,5 +54,5 @@ left join teams awt
     on s.away_team = awt.team_name and not s.is_placeholder
 left join venues v
     on s.venue = v.venue_name and s.city = v.city
-left join matches m
-    on s.home_team = m.home_team and s.away_team = m.away_team
+left join match_map mm
+    on s.match_no = mm.match_no
