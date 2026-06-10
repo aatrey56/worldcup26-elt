@@ -29,6 +29,7 @@ scored as (
         fixture_id,
         kickoff_utc,
         last_updated,
+        loaded_at,
         home_team,
         away_team,
         home_score,
@@ -77,7 +78,9 @@ select
     -- fct_result incremental predicate reprocess ALL rows every run. lastUpdated
     -- only advances when the provider actually changes the match (new result or
     -- score correction), so the predicate re-pulls only genuinely changed rows.
-    s.last_updated                             as source_loaded_at,
+    -- coalesce to loaded_at so a null lastUpdated never yields a null
+    -- source_loaded_at (which would fail `null > max` and silently drop the match).
+    coalesce(s.last_updated, s.loaded_at)      as source_loaded_at,
     s.home_team,
     s.away_team,
     s.home_score,

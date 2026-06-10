@@ -43,4 +43,9 @@ join api_dates a
     on km.fixture_id = a.fixture_id
 join seed_dates s
     on km.match_no = s.match_no
-where abs(date_diff('day', cast(a.kickoff_utc as date), s.match_date)) > 1
+-- fail when the dates diverge by more than a day OR when either date is null
+-- (a null date means the positional map cannot be date-validated, which is the
+-- very misalignment case this test exists to catch).
+where a.kickoff_utc is null
+   or s.match_date is null
+   or abs(date_diff('day', cast(a.kickoff_utc as date), s.match_date)) > 1
