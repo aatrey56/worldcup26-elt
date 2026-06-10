@@ -17,7 +17,7 @@ order by group_letter, team_name
 
 <DataTable data={teams} search=true rows=all>
   <Column id=group_letter title="Group" align=center />
-  <Column id=team_name title="Team" contentType=link linkCol=team_link openInNewTab=false />
+  <Column id=team_link contentType=link linkLabel=team_name title="Team" openInNewTab=false />
   <Column id=fifa_code title="Code" align=center />
   <Column id=confederation title="Confederation" />
 </DataTable>
