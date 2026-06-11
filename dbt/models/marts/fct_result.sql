@@ -32,11 +32,12 @@
 -- would accumulate; the unmapped_finished_results singular test fails loudly if
 -- a real result is ever dropped this way.
 --
--- LIVE NOTE: a FIFA live row's source_loaded_at coalesces to the loader
--- timestamp (LastPeriodUpdate can be null in-play), which advances every run.
--- That is intentional: the incremental predicate then re-pulls the live match
--- every run so its score updates, and delete+insert upserts the same match_key
--- in place. When the match finishes, the final score lands the same way.
+-- LIVE NOTE: a FIFA row's source_loaded_at is the loader timestamp (loaded_at),
+-- which advances every run. That is intentional: the incremental predicate then
+-- re-pulls the live match every run so its score updates, and delete+insert
+-- upserts the same match_key in place. When the match finishes, loaded_at is
+-- still advancing, so the final score lands the same way (see int_results_scored
+-- for why loaded_at, not LastPeriodUpdate, is used for FIFA).
 
 -- SCHEMA EVOLUTION: on_schema_change = 'append_new_columns' lets a persistent
 -- incremental warehouse (the orchestrated Airflow path) absorb additive columns
@@ -102,7 +103,12 @@ select
     r.result,
     r.is_live,
     r.source,
-    m.match_date as played_at,
+    -- played_at is the actual kickoff timestamp carried from the winning source
+    -- (FIFA Date / football-data kickoff_utc), NOT dim_match.match_date (which is
+    -- date-only). A real timestamp keeps "most recent results" ordering stable
+    -- among matches played on the same calendar day. Fall back to match_date if a
+    -- source ever omits the kickoff.
+    coalesce(r.kickoff_ts, m.match_date) as played_at,
     r.source_loaded_at,
     case
         when r.result = 'home_win' then ht.team_key

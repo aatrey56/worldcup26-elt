@@ -62,11 +62,11 @@ fifa_raw as (
     select
         match_id as fifa_match_id,
         status,
+        match_date,
         home_team_name,
         away_team_name,
         home_score,
         away_score,
-        last_period_update,
         loaded_at
     from {{ ref('stg_fifa_matches') }}
     where
@@ -104,10 +104,18 @@ fifa_scored as (
         end as away_points,
         (f.status in (3, 12)) as is_live,
         cast('fifa' as varchar) as source,
-        -- LastPeriodUpdate is null until the match goes live; coalesce to the
-        -- loader timestamp so source_loaded_at is never null (a null would fail
-        -- the fct_result incremental predicate `x > max` and drop the row).
-        coalesce(f.last_period_update, f.loaded_at) as source_loaded_at
+        f.match_date as kickoff_ts,
+        -- source_loaded_at drives the fct_result incremental predicate. For FIFA
+        -- we use the LOADER timestamp (loaded_at), which strictly advances on
+        -- every run, NOT LastPeriodUpdate. LastPeriodUpdate is null in-play and
+        -- then freezes at the end-of-play time once the match finishes; that
+        -- frozen value can be EARLIER than the last in-play run's loaded_at, so a
+        -- `source_loaded_at > max` predicate would skip the finishing row and
+        -- leave a stale live score with is_live still true. loaded_at advancing
+        -- every run guarantees the live row re-pulls while in play AND the final
+        -- score lands when it finishes. Cost: finished FIFA rows re-pull every
+        -- run, but the model is at most 104 rows so that is negligible.
+        f.loaded_at as source_loaded_at
     from fifa_raw as f
     join fifa_map as fm
         on f.fifa_match_id = fm.fifa_match_id
@@ -177,9 +185,12 @@ fd_scored as (
         end as away_points,
         cast(false as boolean) as is_live,
         cast('football-data' as varchar) as source,
+        f.kickoff_utc as kickoff_ts,
         -- source_loaded_at is the provider's lastUpdated (carried to drive the
         -- fct_result incremental predicate), coalesced to loaded_at so a null
-        -- never drops the row. See fct_result for the full rationale.
+        -- never drops the row. football-data rows are always finished, so
+        -- lastUpdated stops advancing once final and the predicate correctly
+        -- stops re-pulling them. See fct_result for the full rationale.
         coalesce(f.last_updated, f.loaded_at) as source_loaded_at
     from fd_raw as f
     left join fd_map as mm
@@ -206,6 +217,7 @@ combined as (
         away_points,
         is_live,
         source,
+        kickoff_ts,
         source_loaded_at
     from fifa_scored
     where match_no is not null
@@ -226,6 +238,7 @@ combined as (
         away_points,
         is_live,
         source,
+        kickoff_ts,
         source_loaded_at
     from fd_scored
     where match_no is not null
@@ -234,12 +247,17 @@ combined as (
 
 ranked as (
 
-    -- one row per match_no: FIFA (source = 'fifa') ranks ahead of football-data
+    -- one row per match_no: FIFA (source = 'fifa') ranks ahead of football-data.
+    -- The source_loaded_at DESC secondary term makes the choice deterministic if
+    -- a single source ever yields two rows for one match_no (the freshest wins),
+    -- so src_rank = 1 is never an arbitrary pick.
     select
         *,
         row_number() over (
             partition by match_no
-            order by case when source = 'fifa' then 0 else 1 end
+            order by
+                case when source = 'fifa' then 0 else 1 end,
+                source_loaded_at desc
         ) as src_rank
     from combined
 
@@ -259,6 +277,7 @@ select
     away_points,
     is_live,
     source,
+    kickoff_ts,
     source_loaded_at
 from ranked
 where src_rank = 1

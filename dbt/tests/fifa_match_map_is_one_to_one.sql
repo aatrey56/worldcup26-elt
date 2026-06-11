@@ -6,7 +6,9 @@
 
 with fixture_dupes as (
 
-    select fifa_match_id as id, count(*) as n
+    select
+        fifa_match_id as id,
+        count(*) as n
     from {{ ref('int_fifa_match_map') }}
     group by fifa_match_id
     having count(*) > 1
@@ -15,13 +17,23 @@ with fixture_dupes as (
 
 match_no_dupes as (
 
-    select match_no as id, count(*) as n
+    select
+        match_no as id,
+        count(*) as n
     from {{ ref('int_fifa_match_map') }}
     group by match_no
     having count(*) > 1
 
 )
 
-select cast(id as varchar) as id, n from fixture_dupes
+select
+    cast(id as varchar) as id,
+    n
+from fixture_dupes
+
 union all
-select cast(id as varchar) as id, n from match_no_dupes
+
+select
+    cast(id as varchar) as id,
+    n
+from match_no_dupes

@@ -21,9 +21,6 @@ select
     payload ->> '$.StageName[0].Description' as stage_name,
     -- GroupName localized [0].Description, e.g. 'Group A'; null for knockout.
     payload ->> '$.GroupName[0].Description' as group_name,
-    -- LastPeriodUpdate is FIFA's last in-play update timestamp; it is null until
-    -- the match goes live, so downstream coalesces it to loaded_at.
-    cast(payload ->> '$.LastPeriodUpdate' as timestamp) as last_period_update,
     cast(payload ->> '$.Home.IdTeam' as bigint) as home_team_id,
     payload ->> '$.Home.TeamName[0].Description' as home_team_name,
     cast(payload ->> '$.Away.IdTeam' as bigint) as away_team_id,

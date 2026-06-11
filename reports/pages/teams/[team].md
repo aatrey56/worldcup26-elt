@@ -106,7 +106,8 @@ select
   r.home_score,
   r.away_score,
   awt.team_name as away_team,
-  r.result
+  r.result,
+  case when r.is_live then 'LIVE' else '' end as status
 from warehouse.fct_result r
 inner join warehouse.dim_match m
   on r.match_key = m.match_key
@@ -122,6 +123,7 @@ order by m.match_no
 {#if team_results.length > 0}
 
 <DataTable data={team_results}>
+  <Column id=status title="" />
   <Column id=match_date title="Date" />
   <Column id=round_label title="Round" />
   <Column id=home_team title="Home" />
