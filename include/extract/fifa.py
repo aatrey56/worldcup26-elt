@@ -72,17 +72,24 @@ BROWSER_UA = (
     "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 )
 
-# Metric-pitch dimensions (FIFA standard) used to rescale metric coordinates to
+# Pitch-coordinate constants used to rescale "metric" (large-magnitude) feeds to
 # the centred normalized frame.
-#   * CENTRED metric (X in +/-52.5, Y in +/-34): divide by the HALF dimensions.
-#   * CORNER-ORIGIN metric (X in 0-105, Y in 0-68): divide by the FULL
-#     dimensions; the resulting [0,1]x[0,1] frame is then mapped the same way.
+#   * CENTRED metric (X in +/-52.5, Y in +/-34, i.e. any negative coord): divide
+#     by the HALF dimensions in metres.
+#   * CORNER-ORIGIN metric (all non-negative): VERIFIED against a real FIFA 2025
+#     senior match (Intercontinental Cup, Dec 2025) the live frame is 0-100 on
+#     BOTH axes (a percentage-of-pitch frame, NOT 0-105/0-68): X 0-100 along the
+#     length, Y 0-100 across the width. We map X to [-1,1] via (x/50 - 1) so each
+#     goal line lands at |X|=1 and the halfway line at 0 (a penalty at x~89.5 or
+#     ~10.5 then folds to x_norm=0.79, matching the 2022 trained model), and Y to
+#     [-0.5,0.5] via (y/100 - 0.5).
 # A coordinate magnitude above METRIC_THRESHOLD means the feed is metric rather
 # than already-normalized.
 PITCH_HALF_LENGTH_M = 52.5
 PITCH_HALF_WIDTH_M = 34.0
-PITCH_FULL_LENGTH_M = 105.0
-PITCH_FULL_WIDTH_M = 68.0
+# Corner-origin live frame is 0-100 on both axes (verified, see above).
+CORNER_ORIGIN_AXIS = 100.0
+CORNER_ORIGIN_HALF = 50.0
 METRIC_THRESHOLD = 1.5
 
 # Robust scale detection (F2): a single stray coordinate must not flip the whole
@@ -178,11 +185,10 @@ def normalize_xy(
         global _metric_warned
         centred_metric = _has_negative_coord(all_match_coords)
         if not _metric_warned:
-            logger.warning(
-                "normalize_xy took the UNVERIFIED metric branch "
-                "(frame=%s). This path has NOT been verified against live "
-                "2026 data: inspect the first live 2026 match to confirm the "
-                "coordinate frame and rescaling before trusting x_norm/y_norm.",
+            logger.info(
+                "normalize_xy took the metric branch (frame=%s). The "
+                "corner-origin 0-100 frame is verified against FIFA 2025 senior "
+                "data; confirm the first live 2026 match uses the same frame.",
                 "centred" if centred_metric else "corner-origin",
             )
             _metric_warned = True
@@ -190,11 +196,12 @@ def normalize_xy(
             cx_centered = x / PITCH_HALF_LENGTH_M
             cy_centered = y / PITCH_HALF_WIDTH_M
         else:
-            # Corner-origin (0-105 / 0-68): map to the centred [-1,1] / [-0.5,0.5]
-            # frame so each goal line lands at |X|=1 (X = x/52.5 - 1) and the
-            # touchline-centred Y at +/-0.5 (Y = y/68 - 0.5).
-            cx_centered = (x / PITCH_HALF_LENGTH_M) - 1.0
-            cy_centered = (y / PITCH_FULL_WIDTH_M) - 0.5
+            # Corner-origin 0-100 on both axes (VERIFIED on FIFA 2025 senior
+            # data): map X to [-1,1] so each goal line is |X|=1 and halfway is 0,
+            # and Y to [-0.5,0.5]. The abs() fold below then sends a shot's NEARER
+            # goal to x_norm=1, which is the attacked goal for a shot.
+            cx_centered = (x / CORNER_ORIGIN_HALF) - 1.0
+            cy_centered = (y / CORNER_ORIGIN_AXIS) - 0.5
     else:
         cx_centered = x
         cy_centered = y
