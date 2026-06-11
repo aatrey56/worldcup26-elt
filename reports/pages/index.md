@@ -4,7 +4,7 @@ title: FIFA World Cup 2026
 
 The 23rd FIFA World Cup runs from **June 11 to July 19, 2026**, hosted across the United States, Canada, and Mexico. This is the first edition with 48 teams, played over 104 matches in 16 host cities.
 
-**How to watch (United States):** English language coverage on FOX and FS1. Spanish language coverage on Telemundo and Universo.
+**How to watch (United States):** English language coverage on FOX and FS1. Spanish language coverage on **Peacock** (every match streamed live in Spanish), plus Telemundo or Universo on linear TV and the Telemundo app. The per-match TV column on each page lists the Spanish options, Peacock first.
 
 **Explore:** [Group standings](/groups) - [Team leaderboard](/leaderboard) - [Knockout bracket](/bracket) - [Golden boot](/scorers) - [Expected goals](/xg) - [Shot map](/shots) - [Teams](/teams)
 
