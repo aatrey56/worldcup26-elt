@@ -1,6 +1,11 @@
--- Grain: one row per (group_letter, team) recomputed from finished group
+-- Grain: one row per (group_letter, team) recomputed from FINISHED group
 -- matches in int_results_scored. Aggregates played/won/drawn/lost/gf/ga/gd/
 -- points, then ranks within each group.
+--
+-- LIVE EXCLUSION: only finished matches move the table, so in-play FIFA rows
+-- (is_live = true) are excluded here. A live score therefore shows on the
+-- dashboard (via fct_result) but does not alter the standings until full time,
+-- which keeps ranks/qualification deterministic mid-match.
 --
 -- TIEBREAKER: this model implements only the first three criteria of the
 -- official FIFA ordering: (1) points DESC, (2) goal difference DESC,
@@ -21,7 +26,7 @@ with group_results as (
 
     select *
     from {{ ref('int_results_scored') }}
-    where group_letter is not null
+    where group_letter is not null and not is_live
 
 ),
 

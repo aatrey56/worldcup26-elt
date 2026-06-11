@@ -66,18 +66,27 @@ models:
               field: venue_key
 
   - name: fct_result
-    description: "One row per finished match with derived result and winner."
+    description: "One row per match with a usable score (finished, or FIFA in-play), with derived result and winner. FIFA is primary (live); football-data is the fallback. is_live distinguishes in-play from final."
     tests:
       - dbt_utils.expression_is_true:
           expression: "home_score >= 0 and away_score >= 0"
     columns:
       - name: match_key
-        description: "FK to dim_match. Not null: every finished match must reconcile to a scheduled match via fixture_id."
+        description: "FK to dim_match. Not null: every scored match must reconcile to a scheduled match via match_no."
         tests:
           - not_null
           - relationships:
               to: ref('dim_match')
               field: match_key
+      - name: is_live
+        description: "True when the score is from a FIFA in-play match; false when final. Downstream standings/aggregates count only is_live = false."
+        tests:
+          - not_null
+      - name: source
+        description: "Provider the row came from: 'fifa' (primary) or 'football-data' (fallback)."
+        tests:
+          - accepted_values:
+              values: ['fifa', 'football-data']
       - name: home_team_key
         description: "FK to dim_team (home side)."
         tests:

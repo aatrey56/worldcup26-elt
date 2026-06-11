@@ -21,17 +21,50 @@ models:
           - unique
           - not_null
 
-  - name: int_results_scored
+  - name: int_fifa_match_map
     description: >
-      One row per genuinely scored match (status = FINISHED and both fullTime
-      scores non-null). Carries fixture_id plus the reconciled match_no and
-      group_letter, with derived result and points.
+      One row per FIFA fixture mapping fifa_match_id to its seed match_no. The
+      FIFA-side analogue of int_match_map (FIFA uses its own ids and team-name
+      spellings). Group matches are matched on the unordered, crosswalk-
+      canonicalized team set within the same group_letter; knockout matches by
+      chronological position within each stage. The fifa_match_map_is_one_to_one
+      singular test asserts the mapping is 1:1 in both directions.
     columns:
-      - name: fixture_id
-        description: "football-data.org match id."
+      - name: fifa_match_id
+        description: "FIFA IdMatch."
         tests:
           - unique
           - not_null
+      - name: match_no
+        description: "Seed match number (1..104) this FIFA fixture reconciles to."
+        tests:
+          - unique
+          - not_null
+
+  - name: int_results_scored
+    description: >
+      One row per scheduled match (match_no) that has a usable score, preferring
+      FIFA (live, first-party; status in 0/3/12) and falling back to
+      football-data.org (status FINISHED). Carries the reconciled match_no and
+      group_letter, canonical home/away team names, derived result and points,
+      an is_live flag (true only for FIFA in-play rows), the source, and the
+      passthrough fixture_id (football-data) / fifa_match_id (FIFA).
+    columns:
+      - name: match_no
+        description: "Seed match number (1..104), unique per scored match."
+        tests:
+          - unique
+          - not_null
+      - name: is_live
+        description: "True when the score is from a FIFA in-play match (status 3/12); false for finished matches. Downstream standings/aggregates filter to is_live = false."
+        tests:
+          - not_null
+      - name: source
+        description: "Provider the row came from: 'fifa' (primary) or 'football-data' (fallback)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['fifa', 'football-data']
 
   - name: int_group_table
     description: >

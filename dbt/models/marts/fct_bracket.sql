@@ -66,6 +66,13 @@ venues as (
 
 results as (
 
+    -- FINISHED ONLY: the bracket resolves real teams, scores, and the winner
+    -- from full-time results only. An in-play FIFA row (is_live = true) carries a
+    -- partial score and a winner derived from that partial score, so including it
+    -- would render a premature/incorrect winner that flips as the match swings or
+    -- goes to penalties. Filtering is_live here keeps a live knockout slot on its
+    -- placeholder labels (null score, null winner) until full time, consistent
+    -- with how the group standings exclude in-play rows.
     select
         match_key,
         home_team_key,
@@ -74,6 +81,7 @@ results as (
         away_score,
         winner_team_key
     from {{ ref('fct_result') }}
+    where not is_live
 
 ),
 

@@ -1,6 +1,11 @@
 -- Grain: one row per team. Aggregates fct_result across home and away
 -- appearances into tournament-level totals.
 --
+-- FINISHED ONLY: per-team tournament totals count only finished matches
+-- (is_live = false). An in-play FIFA score is visible in fct_result but is
+-- excluded here so wins/points/stage_reached reflect only completed matches and
+-- do not flicker while a game is in progress.
+--
 -- FIX 3/8: stage_reached is the FURTHEST stage a team actually reached,
 -- computed from fct_result joined to dim_match.stage. Stages are ranked by a
 -- STRICTLY DISTINCT tournament order so the label is deterministic:
@@ -17,6 +22,7 @@ with results as (
 
     select *
     from {{ ref('fct_result') }}
+    where not is_live
 
 ),
 

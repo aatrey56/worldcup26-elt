@@ -11,6 +11,8 @@ select
   home_score,
   away_score,
   result,
+  is_live,
+  source,
   winner_team_key,
   played_at,
   loaded_at
@@ -25,6 +27,8 @@ select
   cast(null as integer)                     as home_score,
   cast(null as integer)                     as away_score,
   cast(null as varchar)                     as result,
+  cast(null as boolean)                     as is_live,
+  cast(null as varchar)                     as source,
   cast(null as varchar)                     as winner_team_key,
   cast(null as timestamp)                   as played_at,
   cast(null as timestamptz)                 as loaded_at

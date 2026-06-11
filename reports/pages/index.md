@@ -47,6 +47,8 @@ select
   r.away_score,
   awt.team_name as away_team,
   r.result,
+  r.is_live,
+  case when r.is_live then 'LIVE' else '' end as status,
   r.played_at
 from warehouse.fct_result r
 inner join warehouse.dim_match m
@@ -55,13 +57,14 @@ inner join warehouse.dim_team ht
   on r.home_team_key = ht.team_key
 inner join warehouse.dim_team awt
   on r.away_team_key = awt.team_key
-order by coalesce(r.played_at, m.match_date) desc
+order by r.is_live desc, coalesce(r.played_at, m.match_date) desc
 limit 10
 ```
 
 {#if recent_results.length > 0}
 
 <DataTable data={recent_results} rows=10>
+  <Column id=status title="" />
   <Column id=match_date title="Date" />
   <Column id=round_label title="Round" />
   <Column id=home_team title="Home" />

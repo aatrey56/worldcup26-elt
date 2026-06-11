@@ -1,30 +1,136 @@
--- Grain: one row per genuinely SCORED match.
--- A match counts as scored only when status = 'FINISHED' AND both fullTime
--- scores are non-null (FIX 6): a FINISHED match with null scores (awarded /
--- abandoned) is excluded rather than mislabelled as a 0-0 draw.
+-- Grain: one row per scheduled match (match_no) that has a usable score,
+-- preferring FIFA (live, first-party) and falling back to football-data.org.
 --
--- Derives result and points, then attaches match_no / group_letter via the
--- stable fixture_id reconciliation (int_match_map), NOT the old fragile
--- (home_team, away_team) name-pair join (FIX 1/4/7). The id-based path lands
--- knockout results and survives name drift.
+-- WHY FIFA IS PRIMARY: the football-data.org free tier is badly delayed; during
+-- a live match it reports status=TIMED with null scores, so a results model
+-- built only on it is EMPTY mid-game and the standings/dashboard go dark. The
+-- FIFA api.fifa.com feed is first-party and updates in-play, so we take it as
+-- the source of truth and keep football-data as a fallback (it still backfills
+-- any match FIFA has not surfaced, and it is the only source on the hermetic
+-- sample, which carries no FIFA match results).
+--
+-- A match counts as scored when both scores are non-null AND:
+--   FIFA: status in (0, 3, 12) -> finished/played (0) or in-play/live (3, 12).
+--   football-data: status = 'FINISHED' (a FINISHED match with null scores is an
+--     award/abandonment and is excluded rather than mislabelled as 0-0).
+--
+-- is_live = true ONLY for FIFA in-play statuses (3, 12). Finished matches
+-- (FIFA 0, all football-data) are is_live = false. Downstream, the group table
+-- and per-team aggregates count only is_live = false rows, so an in-progress
+-- score shows on the dashboard but does NOT move the standings until full time.
+--
+-- COALESCE PER match_no: if FIFA has a row for a match_no we use it; otherwise
+-- we use football-data's. Output is one row per match_no. fixture_id is the
+-- football-data id (null for FIFA-only rows); fifa_match_id is the FIFA id
+-- (null for football-data rows); both are passed through for traceability.
 --
 -- Materialized as a table: it is recomputed by several downstream models
 -- (fct_result, int_group_table), so we compute it once.
 
 {{ config(materialized='table') }}
 
-with matches as (
+with schedule as (
 
-    select *
-    from {{ ref('stg_matches') }}
+    select
+        match_no,
+        group_letter
+    from {{ ref('stg_schedule') }}
+
+),
+
+-- ========================= FIFA (primary) =========================
+fifa_crosswalk as (
+
+    select
+        fifa_name,
+        seed_name
+    from {{ ref('fifa_team_name_crosswalk') }}
+
+),
+
+fifa_map as (
+
+    select
+        fifa_match_id,
+        match_no
+    from {{ ref('int_fifa_match_map') }}
+
+),
+
+fifa_raw as (
+
+    select
+        match_id as fifa_match_id,
+        status,
+        home_team_name,
+        away_team_name,
+        home_score,
+        away_score,
+        last_period_update,
+        loaded_at
+    from {{ ref('stg_fifa_matches') }}
     where
-        status = 'FINISHED'
+        status in (0, 3, 12)
         and home_score is not null
         and away_score is not null
 
 ),
 
-scored as (
+fifa_scored as (
+
+    select
+        fm.match_no,
+        f.fifa_match_id,
+        cast(null as bigint) as fixture_id,
+        sch.group_letter,
+        coalesce(hx.seed_name, f.home_team_name) as home_team,
+        coalesce(ax.seed_name, f.away_team_name) as away_team,
+        f.home_score,
+        f.away_score,
+        case
+            when f.home_score > f.away_score then 'home_win'
+            when f.home_score < f.away_score then 'away_win'
+            else 'draw'
+        end as result,
+        case
+            when f.home_score > f.away_score then 3
+            when f.home_score = f.away_score then 1
+            else 0
+        end as home_points,
+        case
+            when f.away_score > f.home_score then 3
+            when f.away_score = f.home_score then 1
+            else 0
+        end as away_points,
+        (f.status in (3, 12)) as is_live,
+        cast('fifa' as varchar) as source,
+        -- LastPeriodUpdate is null until the match goes live; coalesce to the
+        -- loader timestamp so source_loaded_at is never null (a null would fail
+        -- the fct_result incremental predicate `x > max` and drop the row).
+        coalesce(f.last_period_update, f.loaded_at) as source_loaded_at
+    from fifa_raw as f
+    join fifa_map as fm
+        on f.fifa_match_id = fm.fifa_match_id
+    left join schedule as sch
+        on fm.match_no = sch.match_no
+    left join fifa_crosswalk as hx
+        on f.home_team_name = hx.fifa_name
+    left join fifa_crosswalk as ax
+        on f.away_team_name = ax.fifa_name
+
+),
+
+-- ===================== football-data (fallback) =====================
+fd_map as (
+
+    select
+        fixture_id,
+        match_no
+    from {{ ref('int_match_map') }}
+
+),
+
+fd_raw as (
 
     select
         fixture_id,
@@ -34,67 +140,125 @@ scored as (
         home_team,
         away_team,
         home_score,
-        away_score,
+        away_score
+    from {{ ref('stg_matches') }}
+    where
+        status = 'FINISHED'
+        and home_score is not null
+        and away_score is not null
+
+),
+
+fd_scored as (
+
+    select
+        mm.match_no,
+        cast(null as bigint) as fifa_match_id,
+        f.fixture_id,
+        sch.group_letter,
+        f.home_team,
+        f.away_team,
+        f.home_score,
+        f.away_score,
         case
-            when home_score > away_score then 'home_win'
-            when home_score < away_score then 'away_win'
+            when f.home_score > f.away_score then 'home_win'
+            when f.home_score < f.away_score then 'away_win'
             else 'draw'
         end as result,
         case
-            when home_score > away_score then 3
-            when home_score = away_score then 1
+            when f.home_score > f.away_score then 3
+            when f.home_score = f.away_score then 1
             else 0
         end as home_points,
         case
-            when away_score > home_score then 3
-            when away_score = home_score then 1
+            when f.away_score > f.home_score then 3
+            when f.away_score = f.home_score then 1
             else 0
-        end as away_points
-    from matches
+        end as away_points,
+        cast(false as boolean) as is_live,
+        cast('football-data' as varchar) as source,
+        -- source_loaded_at is the provider's lastUpdated (carried to drive the
+        -- fct_result incremental predicate), coalesced to loaded_at so a null
+        -- never drops the row. See fct_result for the full rationale.
+        coalesce(f.last_updated, f.loaded_at) as source_loaded_at
+    from fd_raw as f
+    left join fd_map as mm
+        on f.fixture_id = mm.fixture_id
+    left join schedule as sch
+        on mm.match_no = sch.match_no
 
 ),
 
-match_map as (
-
-    select
-        fixture_id,
-        match_no
-    from {{ ref('int_match_map') }}
-
-),
-
-schedule as (
+-- ===================== coalesce FIFA over football-data =====================
+combined as (
 
     select
         match_no,
-        group_letter
-    from {{ ref('stg_schedule') }}
+        fifa_match_id,
+        fixture_id,
+        group_letter,
+        home_team,
+        away_team,
+        home_score,
+        away_score,
+        result,
+        home_points,
+        away_points,
+        is_live,
+        source,
+        source_loaded_at
+    from fifa_scored
+    where match_no is not null
+
+    union all
+
+    select
+        match_no,
+        fifa_match_id,
+        fixture_id,
+        group_letter,
+        home_team,
+        away_team,
+        home_score,
+        away_score,
+        result,
+        home_points,
+        away_points,
+        is_live,
+        source,
+        source_loaded_at
+    from fd_scored
+    where match_no is not null
+
+),
+
+ranked as (
+
+    -- one row per match_no: FIFA (source = 'fifa') ranks ahead of football-data
+    select
+        *,
+        row_number() over (
+            partition by match_no
+            order by case when source = 'fifa' then 0 else 1 end
+        ) as src_rank
+    from combined
 
 )
 
 select
-    s.fixture_id,
-    mm.match_no,
-    sch.group_letter,
-    s.kickoff_utc,
-    -- FIX 6: source_loaded_at is the provider's lastUpdated (when the provider
-    -- last changed this match), NOT the loader's load timestamp. The loader
-    -- restamps loaded_at on every full-snapshot run, so using it would make the
-    -- fct_result incremental predicate reprocess ALL rows every run. lastUpdated
-    -- only advances when the provider actually changes the match (new result or
-    -- score correction), so the predicate re-pulls only genuinely changed rows.
-    -- coalesce to loaded_at so a null lastUpdated never yields a null
-    -- source_loaded_at (which would fail `null > max` and silently drop the match).
-    s.home_team,
-    s.away_team,
-    s.home_score,
-    s.away_score,
-    s.result,
-    s.home_points,
-    s.away_points,
-    coalesce(s.last_updated, s.loaded_at) as source_loaded_at
-from scored as s
-left join match_map as mm
-    on s.fixture_id = mm.fixture_id
-left join schedule as sch
-    on mm.match_no = sch.match_no
+    match_no,
+    fifa_match_id,
+    fixture_id,
+    group_letter,
+    home_team,
+    away_team,
+    home_score,
+    away_score,
+    result,
+    home_points,
+    away_points,
+    is_live,
+    source,
+    source_loaded_at
+from ranked
+where src_rank = 1
