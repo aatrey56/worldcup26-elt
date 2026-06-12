@@ -73,6 +73,8 @@ fifa_raw as (
         status in (0, 3, 12)
         and home_score is not null
         and away_score is not null
+        -- current season only; the sample's 2022 FIFA fixtures are not results.
+        and season_id = {{ var('fifa_season_id') }}
 
 ),
 

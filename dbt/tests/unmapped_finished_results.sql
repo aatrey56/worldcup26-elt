@@ -31,6 +31,9 @@ with fifa_scored_src as (
         status in (0, 3, 12)
         and home_score is not null
         and away_score is not null
+        -- same season scope as int_results_scored: only current-season FIFA
+        -- matches are expected to reconcile, so only they can be "lost".
+        and season_id = {{ var('fifa_season_id') }}
 
 ),
 

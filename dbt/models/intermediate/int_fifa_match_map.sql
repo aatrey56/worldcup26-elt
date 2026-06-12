@@ -36,6 +36,9 @@ with fifa_matches as (
         home_team_name,
         away_team_name
     from {{ ref('stg_fifa_matches') }}
+    -- only the current tournament season reconciles to the 2026 seed; the
+    -- hermetic sample's 2022 FIFA fixtures (a different season) are excluded.
+    where season_id = {{ var('fifa_season_id') }}
 
 ),
 

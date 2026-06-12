@@ -4,6 +4,13 @@ config-version: 2
 
 profile: worldcup26
 
+# FIFA result-scoring is scoped to the current tournament season. The live
+# loader only fetches season 285023 (WC 2026), but the hermetic sample reuses
+# 2022 FIFA fixtures (season 255711) purely for shot/event/xG sample data, so
+# the results pipeline filters to this season to ignore those cross-season rows.
+vars:
+  fifa_season_id: 285023
+
 model-paths: ["models"]
 seed-paths: ["seeds"]
 test-paths: ["tests"]

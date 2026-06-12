@@ -15,6 +15,7 @@ with src as (
 select
     match_id,
     cast(payload ->> '$.Date' as timestamp) as match_date,
+    cast(payload ->> '$.IdSeason' as bigint) as season_id,
     cast(payload ->> '$.IdStage' as bigint) as stage_id,
     cast(payload ->> '$.MatchStatus' as int) as status,
     -- StageName localized [0].Description, e.g. 'First Stage', 'Round of 32'.

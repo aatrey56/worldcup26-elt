@@ -101,6 +101,8 @@ models:
           - not_null
       - name: match_date
         description: "Kickoff timestamp (payload.Date, UTC)."
+      - name: season_id
+        description: "FIFA IdSeason. Result-scoring filters to var('fifa_season_id') (285023, WC 2026); the sample's 2022 fixtures carry a different season."
       - name: status
         description: "FIFA MatchStatus (0=played, 1=upcoming, 3/12=live)."
       - name: home_team_name
