@@ -71,3 +71,38 @@ models:
       One row per (group_letter, team), recomputed from finished group matches.
       won/drawn/lost are derived from the points column; ranked within each group
       by points, goal difference, goals scored.
+
+  - name: int_group_table_live
+    description: >
+      One row per (group_letter, team) over ALL 48 group-stage teams: the LIVE
+      provisional table. Unlike int_group_table (finished-only), it folds the
+      current score of an in-play match into the standings "as things stand" and
+      adds per-team live status/score. Left-joined from dim_team so every group
+      always has 4 teams (a determinate 3rd place for the bracket resolver).
+    columns:
+      - name: rank
+        description: "Provisional 1-4 within the group (in-play scores included)."
+        tests:
+          - not_null
+
+  - name: int_projected_r32
+    description: >
+      The projected Round of 32 (16 fixtures, match_no 73-88), resolved from the
+      LIVE provisional standings via the FIFA Annexe C third-place seeding. A dbt
+      python model wrapping the committed resolver (include/third_place_seeding.py);
+      recomputed every run so the matchups track the standings "as things stand".
+      is_provisional is true until all 72 group matches are final, then they lock.
+    columns:
+      - name: match_no
+        description: "R32 bracket position (73-88)."
+        tests:
+          - unique
+          - not_null
+      - name: home_team
+        description: "Projected home team name (resolved from current standings)."
+        tests:
+          - not_null
+      - name: away_team
+        description: "Projected away team name (winner-vs-runner-up, or the Annexe C third)."
+        tests:
+          - not_null

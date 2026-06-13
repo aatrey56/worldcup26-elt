@@ -11,8 +11,10 @@ ENV DUCKDB_PATH=/usr/local/airflow/include/data/warehouse.duckdb
 # Install dbt into an isolated virtualenv (dbt and Airflow can have conflicting
 # dependencies) and pre-install dbt packages so Cosmos does not need network at
 # parse time. Cosmos runs dbt via ExecutionConfig(dbt_executable_path=...).
+# pandas + pyarrow back the dbt python model int_projected_r32 (the
+# projected-bracket resolver); dbt-duckdb needs them to land its dataframe.
 RUN python -m venv dbt_venv && \
     . dbt_venv/bin/activate && \
-    pip install --no-cache-dir dbt-duckdb==1.10.1 && \
+    pip install --no-cache-dir dbt-duckdb==1.10.1 pandas pyarrow && \
     (cd dbt && dbt deps) && \
     deactivate

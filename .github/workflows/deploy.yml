@@ -10,8 +10,13 @@ on:
     branches: [main]
   workflow_dispatch:
   schedule:
-    # Refresh every 6 hours during the tournament (UTC).
+    # Baseline refresh every 6 hours (UTC). Always builds.
     - cron: "0 */6 * * *"
+    # Near-live refresh every 5 minutes, but the gate job only lets it through
+    # when a match is in its live window, so the site updates during games and
+    # stays idle otherwise. Realistic freshness during a match is ~5-10 min
+    # (GitHub schedules can lag, and Pages rate-limits republishes).
+    - cron: "*/5 * * * *"
 
 # Pages deployment needs these scopes and the OIDC id-token.
 permissions:
@@ -28,8 +33,38 @@ env:
   DUCKDB_PATH: ${{ github.workspace }}/include/data/warehouse.duckdb
 
 jobs:
+  gate:
+    name: Live-window gate
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.decide.outputs.should_build }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Decide whether to build
+        id: decide
+        # Always build on push, manual dispatch, or the 6h baseline cron. On the
+        # frequent 5-min cron, only build when a match is in its live window
+        # (include/schedule_window.py reads the schedule seed). This keeps the
+        # site near-live during games and avoids pointless republishes when idle.
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ] || [ "${{ github.event.schedule }}" = "0 */6 * * *" ]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            echo "[gate] trigger=${{ github.event_name }} schedule='${{ github.event.schedule }}' -> building"
+          else
+            python -m include.schedule_window >> "$GITHUB_OUTPUT"
+          fi
+
   build:
     name: Build live data, dashboard, and docs
+    needs: gate
+    if: needs.gate.outputs.should_build == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -49,9 +84,11 @@ jobs:
           cache-dependency-path: reports/package-lock.json
 
       - name: Install Python tooling
+        # pandas + pyarrow back the dbt python model int_projected_r32 (the
+        # projected-bracket resolver); dbt-duckdb needs them to land its output.
         run: |
           python -m pip install --upgrade pip
-          pip install dbt-duckdb==1.10.1 duckdb requests tenacity
+          pip install dbt-duckdb==1.10.1 duckdb requests tenacity pandas pyarrow
 
       - name: dbt deps
         working-directory: dbt
@@ -80,6 +117,10 @@ jobs:
 
       - name: dbt build (seeds, models, tests)
         working-directory: dbt
+        # REPO_ROOT lets the int_projected_r32 python model import the resolver
+        # in include/ (its cwd is the dbt project dir).
+        env:
+          REPO_ROOT: ${{ github.workspace }}
         run: dbt build --profiles-dir .
 
       - name: dbt docs generate

@@ -38,9 +38,11 @@ profile_config = ProfileConfig(
     profiles_yml_filepath=DBT_PROJECT_PATH / "profiles.yml",
 )
 
+# REPO_ROOT lets the int_projected_r32 dbt python model import the resolver in
+# include/ (it adds REPO_ROOT to sys.path); /usr/local/airflow holds include/.
 project_config = ProjectConfig(
     dbt_project_path=DBT_PROJECT_PATH,
-    env_vars={"DUCKDB_PATH": DUCKDB_PATH},
+    env_vars={"DUCKDB_PATH": DUCKDB_PATH, "REPO_ROOT": "/usr/local/airflow"},
 )
 
 execution_config = ExecutionConfig(dbt_executable_path=DBT_EXECUTABLE)

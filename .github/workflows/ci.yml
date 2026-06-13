@@ -35,9 +35,12 @@ jobs:
           cache: pip
 
       - name: Install Python tooling
+        # pandas + pyarrow back the dbt python model int_projected_r32 (the
+        # projected-bracket resolver); dbt-duckdb needs them to land a python
+        # model's dataframe.
         run: |
           python -m pip install --upgrade pip
-          pip install ruff sqlfluff sqlfluff-templater-dbt dbt-duckdb==1.10.1 duckdb
+          pip install ruff sqlfluff sqlfluff-templater-dbt dbt-duckdb==1.10.1 duckdb pandas pyarrow
 
       - name: Ruff lint
         run: ruff check .
@@ -51,6 +54,10 @@ jobs:
 
       - name: dbt build (seeds, models, tests)
         working-directory: dbt
+        # REPO_ROOT lets the int_projected_r32 python model import the resolver
+        # in include/ (its cwd is the dbt project dir).
+        env:
+          REPO_ROOT: ${{ github.workspace }}
         run: dbt build --profiles-dir .
 
       - name: SQLFluff lint dbt models

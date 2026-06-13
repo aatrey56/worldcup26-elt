@@ -17,5 +17,7 @@ select
   away_label,
   home_score,
   away_score,
-  winner_label
+  winner_label,
+  is_projected,
+  is_provisional
 from main.fct_bracket

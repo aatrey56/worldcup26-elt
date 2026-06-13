@@ -92,8 +92,29 @@ teams as (
         team_name
     from {{ ref('dim_team') }}
 
+),
+
+projected as (
+
+    -- PROJECTED R32 "as things stand": int_projected_r32 resolves the Round of 32
+    -- matchups (match_no 73-88) from the CURRENT provisional group standings via
+    -- the FIFA Annexe C third-place seeding. It only covers the R32 (the first
+    -- knockout round); R16 onward stay on their placeholders until their feeder
+    -- games are actually played. is_provisional is true until all 72 group
+    -- matches are final, then the matchups lock.
+    select
+        match_no,
+        home_team as projected_home,
+        away_team as projected_away,
+        is_provisional
+    from {{ ref('int_projected_r32') }}
+
 )
 
+-- LABEL PRECEDENCE: actual played team (fct_result) > projected team (current
+-- standings, R32 only) > schedule placeholder ("Winner A", "3rd A/B/C/D/F").
+-- A slot shows a real projected team before its knockout game is played, and
+-- switches to the actual team once that game has a finished result.
 select
     km.match_no,
     km.match_key,
@@ -105,11 +126,16 @@ select
     km.channel_en,
     km.channel_es,
     v.venue_name as venue,
-    coalesce(ht.team_name, sl.home_placeholder) as home_label,
-    coalesce(awt.team_name, sl.away_placeholder) as away_label,
+    coalesce(ht.team_name, p.projected_home, sl.home_placeholder) as home_label,
+    coalesce(awt.team_name, p.projected_away, sl.away_placeholder) as away_label,
     r.home_score,
     r.away_score,
-    wt.team_name as winner_label
+    wt.team_name as winner_label,
+    -- the matchup is shown from projection (not an actual result) when no
+    -- finished result exists yet but a projected team is available.
+    (r.match_key is null and p.match_no is not null) as is_projected,
+    -- the projection is provisional until the group stage is complete.
+    (r.match_key is null and coalesce(p.is_provisional, false)) as is_provisional
 from knockout_matches as km
 left join schedule_labels as sl
     on km.match_no = sl.match_no
@@ -123,3 +149,5 @@ left join teams as awt
     on r.away_team_key = awt.team_key
 left join teams as wt
     on r.winner_team_key = wt.team_key
+left join projected as p
+    on km.match_no = p.match_no

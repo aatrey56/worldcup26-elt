@@ -115,6 +115,41 @@ models:
               to: ref('dim_team')
               field: team_key
 
+  - name: fct_group_standings_live
+    description: "One row per (group_letter, team) over all 48 group-stage teams: the LIVE standings table powering the groups page. Provisional standings 'as things stand' (an in-play match's current score folded in), plus per-team live status/score. Parallels fct_group_standings (finished-only). When nothing is in play it equals the official table."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - group_letter
+            - team_key
+    columns:
+      - name: team_key
+        description: "FK to dim_team."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_team')
+              field: team_key
+      - name: rank
+        description: "Provisional 1-4 within the group on points/gd/gf/team_name (in-play scores included)."
+        tests:
+          - not_null
+      - name: points
+        description: "Provisional points: finished points plus the 3/1/0 the in-play match currently implies."
+        tests:
+          - not_null
+      - name: is_playing
+        description: "True when this team is in an in-play group match right now."
+        tests:
+          - not_null
+      - name: live_status
+        description: "winning/tied/losing from the in-play match's current score; null when not playing."
+        tests:
+          - accepted_values:
+              values: ['winning', 'tied', 'losing']
+              config:
+                where: "live_status is not null"
+
   - name: agg_team_tournament
     description: "One row per team: tournament-level aggregate from fct_result."
     columns:
@@ -260,7 +295,7 @@ models:
         description: "Furthest stage the team has reached ('group' if no finished matches yet)."
 
   - name: fct_bracket
-    description: "One row per knockout match (dim_match where stage != 'group'; 32 rows). The bracket tree. home_label/away_label resolve to the real team name once the feeding match is played (via fct_result -> dim_team) else fall back to the stg_schedule placeholder text. Scores/winner_label are null until played. Always 32 placeholder rows pre-tournament."
+    description: "One row per knockout match (dim_match where stage != 'group'; 32 rows). The bracket tree. home_label/away_label resolve actual played team (fct_result -> dim_team) > projected team (int_projected_r32, R32 only, from current standings) > schedule placeholder. is_projected flags an R32 slot shown from the current-standings projection; is_provisional flags that projection as pre-group-stage-complete. Scores/winner_label are null until played. Always 32 rows pre-tournament."
     columns:
       - name: match_no
         description: "Schedule match number (stable id for the fixture)."
@@ -286,5 +321,13 @@ models:
           - not_null
       - name: away_label
         description: "Resolved away team name if the match is played, else the schedule placeholder text."
+        tests:
+          - not_null
+      - name: is_projected
+        description: "True for an R32 slot filled from the current-standings projection (no actual result yet)."
+        tests:
+          - not_null
+      - name: is_provisional
+        description: "True when the projected matchup is still provisional (group stage not complete)."
         tests:
           - not_null

@@ -4,7 +4,7 @@ title: Knockout Bracket
 
 The knockout phase runs from the round of 32 through to the final on July 19, 2026 at MetLife Stadium. With 48 teams, 2026 introduces a round of 32 for the first time.
 
-This bracket fills in automatically. Each slot starts as a placeholder ("Winner Group A", "Winner Match 73", and so on) and is replaced by the real team once the feeding match is decided. Scores and the advancing team appear as results are loaded.
+This bracket is **live and projected**. The Round of 32 is filled in right now from the current group standings *as things stand* (using FIFA's official third-place seeding rules), so you can see who would play whom if the groups ended this minute. Those matchups are marked **projected** and shift as scores change; once all group games are final they **lock**, and once a knockout game is played the real result and the advancing team replace the projection. The Round of 16 onward stays on placeholders until its feeder games are decided.
 
 ```sql bracket
 select
@@ -27,7 +27,13 @@ select
     when home_score is not null then home_label || '  ' || home_score || ' - ' || away_score || '  ' || away_label
     else home_label || '  vs  ' || away_label
   end as fixture,
-  case when winner_label is not null then '-> ' || winner_label else '' end as advancing
+  case when winner_label is not null then '-> ' || winner_label else '' end as advancing,
+  case
+    when winner_label is not null then ''
+    when is_provisional then 'projected (as things stand)'
+    when is_projected then 'confirmed matchup'
+    else ''
+  end as status
 from warehouse.fct_bracket
 order by match_no
 ```
@@ -51,6 +57,7 @@ order by first_match
 <DataTable data={bracket.filter(d => d.stage === r.stage)} rows=all>
   <Column id=match_no title="Match" align=center />
   <Column id=fixture title="Fixture" />
+  <Column id=status title="Status" />
   <Column id=advancing title="Advances" />
   <Column id=match_date title="Date" />
   <Column id=venue title="Venue" />
