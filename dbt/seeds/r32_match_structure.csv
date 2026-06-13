@@ -1,0 +1,17 @@
+match_no,home_seed,away_seed,away_is_third,eligible_thirds
+73,2A,2B,0,
+74,1E,3RD,1,ABCDF
+75,1F,2C,0,
+76,1C,2F,0,
+77,1I,3RD,1,CDFGH
+78,2E,2I,0,
+79,1A,3RD,1,CEFHI
+80,1L,3RD,1,EHIJK
+81,1D,3RD,1,BEFIJ
+82,1G,3RD,1,AEHIJ
+83,2K,2L,0,
+84,1H,2J,0,
+85,1B,3RD,1,EFGIJ
+86,1J,2H,0,
+87,1K,3RD,1,DEIJL
+88,2D,2G,0,
