@@ -43,10 +43,11 @@ Sign up at https://cron-job.org (free) and create a job:
 - **Schedule:** every 5 minutes (`*/5`). Optional: restrict to the tournament
   dates / typical match hours to cut down on idle pings.
 - **Headers:**
-  - `Accept: application/vnd.github+json`
   - `Authorization: Bearer YOUR_PAT_HERE`
+  - `Accept: application/vnd.github+json`
+  - `Content-Type: application/json`
   - `X-GitHub-Api-Version: 2022-11-28`
-  - `User-Agent: worldcup26-pinger` (GitHub rejects requests with no User-Agent)
+  - (no User-Agent needed: cron-job.org sends its own, which GitHub accepts)
 - **Request body:** `{"event_type":"refresh"}`
 
 Save and enable it.
