@@ -19,8 +19,9 @@ served by an Evidence.dev dashboard. Live during the tournament (Jun 11 to Jul 1
 - reports/              Evidence dashboard (groups [live standings], bracket [live + projected R32], leaderboard,
                         scorers, xg, shots, teams; reads the warehouse)
 - analysis/euro2024/    standalone StatsBomb xT/VAEP/carry analysis (own venv; not in the live pipeline)
-- .github/workflows/    ci.yml (lint + hermetic dbt build/test) and deploy.yml (live load + build + Pages; 6h baseline +
-                        5-min cron gated to live match windows)
+- .github/workflows/    ci.yml (lint + hermetic dbt build/test) and deploy.yml (live load + build + Pages; 6h baseline cron +
+                        external repository_dispatch ping gated to live match windows; GitHub cron is too flaky for 5-min.
+                        See docs/LIVE_UPDATES.md)
 
 ## Stack
 Astro/Airflow 3.x, dbt-core + astronomer-cosmos, dbt-duckdb (swap to Snowflake/MotherDuck via

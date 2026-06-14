@@ -9,14 +9,18 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # LIVE-UPDATE DRIVER. An external scheduler (cron-job.org) pings the GitHub API
+  # every ~5 min with {"event_type":"refresh"}. GitHub's own scheduled cron is
+  # too unreliable for 5-minute scheduling (it drops high-frequency schedules and
+  # lags hours), so the external ping drives the near-live refresh; the gate job
+  # only actually builds when a match is in its live window, so off-game pings are
+  # a near-instant no-op. Setup: see docs/LIVE_UPDATES.md.
+  repository_dispatch:
+    types: [refresh]
   schedule:
-    # Baseline refresh every 6 hours (UTC). Always builds.
+    # Baseline refresh every 6 hours (UTC). Always builds. (Best-effort: GitHub
+    # delays these, which is exactly why the live path uses the external ping.)
     - cron: "0 */6 * * *"
-    # Near-live refresh every 5 minutes, but the gate job only lets it through
-    # when a match is in its live window, so the site updates during games and
-    # stays idle otherwise. Realistic freshness during a match is ~5-10 min
-    # (GitHub schedules can lag, and Pages rate-limits republishes).
-    - cron: "*/5 * * * *"
 
 # Pages deployment needs these scopes and the OIDC id-token.
 permissions:
@@ -49,15 +53,19 @@ jobs:
 
       - name: Decide whether to build
         id: decide
-        # Always build on push, manual dispatch, or the 6h baseline cron. On the
-        # frequent 5-min cron, only build when a match is in its live window
-        # (include/schedule_window.py reads the schedule seed). This keeps the
-        # site near-live during games and avoids pointless republishes when idle.
+        # Always build on push, manual dispatch, or the 6h baseline cron. For the
+        # external live ping (repository_dispatch), only build when a match is in
+        # its live window (include/schedule_window.py reads the schedule seed), so
+        # the site is near-live during games and off-game pings are a no-op.
+        env:
+          EVENT: ${{ github.event_name }}
+          SCHED: ${{ github.event.schedule }}
         run: |
-          if [ "${{ github.event_name }}" != "schedule" ] || [ "${{ github.event.schedule }}" = "0 */6 * * *" ]; then
+          if [ "$EVENT" = "push" ] || [ "$EVENT" = "workflow_dispatch" ] || [ "$SCHED" = "0 */6 * * *" ]; then
             echo "should_build=true" >> "$GITHUB_OUTPUT"
-            echo "[gate] trigger=${{ github.event_name }} schedule='${{ github.event.schedule }}' -> building"
+            echo "[gate] event=$EVENT schedule='$SCHED' -> building"
           else
+            echo "[gate] event=$EVENT -> checking live window"
             python -m include.schedule_window >> "$GITHUB_OUTPUT"
           fi
 
