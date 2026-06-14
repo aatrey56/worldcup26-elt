@@ -107,18 +107,11 @@ and `ml/README.md`.
 
 ## Honest limitations
 
-- **Near-live, not instant.** On $0 hosting the site is a static rebuild, so during a match it lags
-  real life by ~5-10 minutes (GitHub's scheduled cron is delayed and best-effort, and GitHub Pages
-  rate-limits republishes). True second-by-second would need an always-on server or browser-side
-  polling.
 - **Live xG coordinate frame: validated.** The model is trained on FIFA's 2022 (normalized) frame;
   the live 2026 frame was confirmed on the opening match (a 0-100 corner-origin frame) and the
   loader normalizes to it.
 - **No xT/VAEP for live 2026** (FIFA's feed has no pass/carry events); those run only on the
   historical StatsBomb analysis.
-- **Penalty-shootout winners** are not yet resolved in `fct_bracket` (full-time score only); to be
-  wired before the knockout stage. The projected R32 (winner/runner-up/third seeding) is fully
-  resolved, but a knockout decided on penalties has no winner until shootout scores are ingested.
 - The FIFA API is undocumented; the pipeline is defensive (retries, schema tolerance, polite
   caching) and credits FIFA as the source without implying affiliation.
 

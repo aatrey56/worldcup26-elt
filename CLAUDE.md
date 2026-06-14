@@ -5,20 +5,26 @@ End-to-end ELT for the 2026 World Cup: Airflow (Astro) orchestrates dbt (via Cos
 served by an Evidence.dev dashboard. Live during the tournament (Jun 11 to Jul 19, 2026).
 
 ## Map
-- dags/                Airflow DAG (Cosmos DbtTaskGroup): load_raw -> load_fifa -> dbt build -> publish; Slack callback
-- include/extract/      football-data.org client + FIFA (api.fifa.com, free, shot x,y) client + idempotent loaders
-                        (base_client.py shared; raw_tables.py helpers; api_football.py is the 2022-2024 fallback)
+- dags/                Airflow DAG (Cosmos DbtTaskGroup): load_raw -> load_fifa -> dbt build -> publish (placeholder); Slack callback
+- include/extract/      football-data.org + FIFA (api.fifa.com, free) clients + idempotent loaders. FIFA is PRIMARY for
+                        live scores/standings/shots; football-data is the fallback (base_client.py shared; raw_tables.py
+                        helpers; api_football.py is the 2022-2024 fallback)
+- include/              third_place_seeding.py + annex_c_map.json (FIFA Annexe C R32 resolver, pure stdlib, has self_test);
+                        schedule_window.py (live-window gate for the auto-update cron)
 - include/data/raw/     cached raw JSON responses (gitignored); raw_sample/ committed for hermetic CI
 - ml/                   offline xG model training (train_xg.py); outputs the dbt/seeds/xg_model.csv coefficients
                         (sklearn is dev-only; scoring is pure SQL in fct_shot)
-- dbt/                  staging -> intermediate -> marts (star schema) + 120 tests + seeds
-- reports/              Evidence dashboard (bracket, leaderboard, scorers, xg, shots, teams; reads the warehouse)
+- dbt/                  staging -> intermediate -> marts (star schema) + 130 tests + seeds. int_projected_r32 is a dbt
+                        PYTHON model (wraps the include/ resolver); every other model is SQL
+- reports/              Evidence dashboard (groups [live standings], bracket [live + projected R32], leaderboard,
+                        scorers, xg, shots, teams; reads the warehouse)
 - analysis/euro2024/    standalone StatsBomb xT/VAEP/carry analysis (own venv; not in the live pipeline)
-- .github/workflows/    ci.yml (lint + hermetic dbt build/test) and deploy.yml (live load + build + Pages cron every 6h)
+- .github/workflows/    ci.yml (lint + hermetic dbt build/test) and deploy.yml (live load + build + Pages; 6h baseline +
+                        5-min cron gated to live match windows)
 
 ## Stack
 Astro/Airflow 3.x, dbt-core + astronomer-cosmos, dbt-duckdb (swap to Snowflake/MotherDuck via
-profile only), Evidence.dev, ruff + sqlfluff.
+profile only; pandas + pyarrow back the one dbt python model), Evidence.dev, ruff + sqlfluff.
 
 ## Rules
 - Idempotent tasks. Re-running changes nothing unintended.
@@ -26,7 +32,14 @@ profile only), Evidence.dev, ruff + sqlfluff.
 - DuckDB is single-writer: threads=1 on the DuckDB profile, limit parallel dbt tasks.
 - Secrets via .env and Airflow Variables/Connections only.
 - Every mart documented and tested. No SELECT * in marts. ref()/source() only.
-- fct_result is incremental in the orchestrated path.
+- fct_result is incremental (delete+insert) in the orchestrated path, keyed on the source-agnostic schedule match_no.
+  FIFA is primary (is_live/source flags); football-data is the fallback. is_live rows show on the dashboard but are
+  excluded from standings/aggregates/bracket-winner until full time. FIFA result-scoring is scoped to var(fifa_season_id).
+- Live vs official standings: fct_group_standings_live folds in-play scores in "as things stand"; fct_group_standings
+  is finished-only. fct_bracket projects the R32 live from the live standings, locking once the group stage is final.
+- Third-place R32 seeding uses the committed include/ resolver via the int_projected_r32 dbt python model (the only
+  python in the dbt DAG). Do NOT rebuild the 495-combination Annexe C table; it is reference data with a self_test
+  and a dbt integrity test.
 - Staging is 1:1 with sources: rename, cast, clean, nothing more.
 - Surrogate keys via dbt_utils.generate_surrogate_key. Document grain in each model.
 - Knockout home_team/away_team in the seed are placeholders (Winner A, 3rd A/B/C/D/F, TBD).
