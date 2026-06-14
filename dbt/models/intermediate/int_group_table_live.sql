@@ -132,8 +132,9 @@ filled as (
         coalesce(a.points, 0) as points,
         coalesce(a.is_playing, false) as is_playing,
         coalesce(a.live_points, 0) as points_live_delta,
-        a.live_for,
-        a.live_against
+        -- cast to integer so the live score renders as "1-0", not "1.0-0.0"
+        cast(a.live_for as integer) as live_for,
+        cast(a.live_against as integer) as live_against
     from all_teams as t
     left join aggregated as a
         on
