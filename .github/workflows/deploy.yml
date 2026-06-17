@@ -102,10 +102,11 @@ jobs:
         working-directory: dbt
         run: dbt deps
 
-      - name: Load LIVE football-data.org data into DuckDB
-        # If the API call fails (transient error, bad key, rate limit) this step
-        # exits non-zero, the job stops, and nothing is deployed: no stale or
-        # empty site is published.
+      - name: Load football-data.org data into DuckDB (fallback source)
+        # football-data.org is the FALLBACK (FIFA is the primary live source).
+        # load_raw degrades gracefully: a transient outage / rate-limit / bad key
+        # is logged and the step still exits 0 (it leaves empty raw tables so dbt
+        # runs FIFA-only). So a football-data hiccup never aborts the live update.
         env:
           FOOTBALL_DATA_KEY: ${{ secrets.FOOTBALL_DATA_KEY }}
           FOOTBALL_DATA_BASE_URL: https://api.football-data.org/v4
@@ -113,11 +114,11 @@ jobs:
           WC_SEASON: "2026"
         run: python -m include.extract.load_raw
 
-      - name: Load LIVE FIFA shot data into DuckDB
-        # FIFA's free public API (api.fifa.com, no key): shot x,y, events,
-        # lineups, top scorers. Creates the raw.fifa_* tables (empty before
-        # kickoff) the FIFA staging models read. Fails loud like load_raw so a
-        # broken feed stops the job and nothing stale is deployed.
+      - name: Load LIVE FIFA data into DuckDB (primary source)
+        # FIFA's free public API (api.fifa.com, no key): live scores, shot x,y,
+        # events, lineups, top scorers. This is the primary live source, so it
+        # DOES fail loud - if FIFA is broken there is no live data to publish and
+        # the job should stop rather than deploy a stale/empty site.
         env:
           WC_COMPETITION: WC
           WC_SEASON: "2026"

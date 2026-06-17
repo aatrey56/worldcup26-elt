@@ -27,13 +27,27 @@ from pathlib import Path
 from typing import Any
 
 import duckdb
+import requests
 
+from include.extract.base_client import ApiClientError, TransientApiError
 from include.extract.football_data import FootballDataClient
 from include.extract.raw_tables import (
+    RawContractError,
     align_standings_schema,
     replace_fixtures,
     replace_standings,
     validate_matches,
+)
+
+# football-data.org is the FALLBACK source (FIFA is primary). A failure to load
+# it must NOT abort the build and take down the FIFA-driven live update, so these
+# error classes are caught and degrade to FIFA-only rather than raising. A genuine
+# programming error (anything not in this set) still fails loudly.
+FOOTBALL_DATA_SOFT_ERRORS = (
+    requests.exceptions.RequestException,  # connection drop, timeout, etc.
+    ApiClientError,  # FootballDataError (bad/missing key, 4xx)
+    TransientApiError,  # 5xx / rate-limit after retries
+    RawContractError,  # provider changed shape / empty feed
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -113,18 +127,48 @@ def load_standings(
     return replace_standings(con, table_rows, loaded_at)
 
 
+def _ensure_raw_tables(con: duckdb.DuckDBPyConnection) -> None:
+    """Create empty raw.fixtures/raw.standings shells if absent.
+
+    Guarantees the tables staging reads always exist, so when the football-data
+    fetch fails the pipeline degrades cleanly to FIFA-only (empty fallback tables)
+    instead of dbt erroring on a missing relation. On a persistent warehouse any
+    existing rows are left untouched (create-if-not-exists).
+    """
+    con.execute(
+        "create table if not exists raw.fixtures "
+        "(fixture_id bigint primary key, payload json, loaded_at timestamp)"
+    )
+    con.execute(
+        "create table if not exists raw.standings "
+        "(team_id bigint primary key, payload json, loaded_at timestamp)"
+    )
+
+
 def main() -> None:
     db = _db_path()
     loaded_at = datetime.now(UTC)
     logger.info("loading live raw data into %s", db)
-    client = FootballDataClient()
     con = duckdb.connect(db)
     try:
         con.execute("create schema if not exists raw")
         align_standings_schema(con)
-        n_fix = load_fixtures(con, client, loaded_at)
-        n_std = load_standings(con, client, loaded_at)
-        logger.info("raw.fixtures: %d rows, raw.standings: %d rows", n_fix, n_std)
+        _ensure_raw_tables(con)
+        try:
+            client = FootballDataClient()
+            n_fix = load_fixtures(con, client, loaded_at)
+            n_std = load_standings(con, client, loaded_at)
+            logger.info("raw.fixtures: %d rows, raw.standings: %d rows", n_fix, n_std)
+        except FOOTBALL_DATA_SOFT_ERRORS as exc:
+            # football-data is the fallback; FIFA (loaded next) is the live source
+            # of truth. Do not fail the build on a fallback outage - log loudly and
+            # leave the raw tables as they are (empty on a fresh warehouse, prior
+            # data on a persistent one). The pipeline runs FIFA-only this cycle.
+            logger.warning(
+                "football-data load failed (%s: %s); continuing FIFA-only",
+                type(exc).__name__,
+                exc,
+            )
     finally:
         con.close()
 
