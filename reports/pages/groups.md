@@ -27,7 +27,14 @@ select
     when 'losing' then '🔴'
     else ''
   end
-  || case when s.is_playing then ' ' || s.live_for || '-' || s.live_against else '' end
+  -- cast to int in the page query: Evidence stores the nullable score columns as
+  -- float in the parquet, so concatenating them directly renders "2.0-1.0"; the
+  -- cast makes it "2-1".
+  || case
+    when s.is_playing
+      then ' ' || cast(s.live_for as int) || '-' || cast(s.live_against as int)
+    else ''
+  end
     as live
 from warehouse.fct_group_standings_live s
 inner join warehouse.dim_team t

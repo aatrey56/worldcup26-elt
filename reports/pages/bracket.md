@@ -21,10 +21,12 @@ select
   home_score,
   away_score,
   winner_label,
+  -- cast scores to int: Evidence stores the nullable score columns as float in
+  -- the parquet, so concatenating them directly would render "2.0 - 1.0".
   case
-    when winner_label is not null and winner_label = home_label then home_label || '  (' || home_score || ' - ' || away_score || ')'
-    when winner_label is not null and winner_label = away_label then away_label || '  (' || home_score || ' - ' || away_score || ')'
-    when home_score is not null then home_label || '  ' || home_score || ' - ' || away_score || '  ' || away_label
+    when winner_label is not null and winner_label = home_label then home_label || '  (' || cast(home_score as int) || ' - ' || cast(away_score as int) || ')'
+    when winner_label is not null and winner_label = away_label then away_label || '  (' || cast(home_score as int) || ' - ' || cast(away_score as int) || ')'
+    when home_score is not null then home_label || '  ' || cast(home_score as int) || ' - ' || cast(away_score as int) || '  ' || away_label
     else home_label || '  vs  ' || away_label
   end as fixture,
   case when winner_label is not null then '-> ' || winner_label else '' end as advancing,
