@@ -49,6 +49,7 @@ select
   r.result,
   r.is_live,
   case when r.is_live then 'LIVE' else '' end as status,
+  v.venue_name || ', ' || v.city as venue,
   r.played_at
 from warehouse.fct_result r
 inner join warehouse.dim_match m
@@ -57,6 +58,8 @@ inner join warehouse.dim_team ht
   on r.home_team_key = ht.team_key
 inner join warehouse.dim_team awt
   on r.away_team_key = awt.team_key
+left join warehouse.dim_venue v
+  on m.venue_key = v.venue_key
 order by r.is_live desc, coalesce(r.played_at, m.match_date) desc
 limit 10
 ```
@@ -71,6 +74,7 @@ limit 10
   <Column id=home_score title="" align=center />
   <Column id=away_score title="" align=center />
   <Column id=away_team title="Away" />
+  <Column id=venue title="Venue" />
 </DataTable>
 
 {:else}

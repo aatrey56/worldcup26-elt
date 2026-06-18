@@ -107,7 +107,8 @@ select
   r.away_score,
   awt.team_name as away_team,
   r.result,
-  case when r.is_live then 'LIVE' else '' end as status
+  case when r.is_live then 'LIVE' else '' end as status,
+  v.venue_name || ', ' || v.city as venue
 from warehouse.fct_result r
 inner join warehouse.dim_match m
   on r.match_key = m.match_key
@@ -115,6 +116,8 @@ inner join warehouse.dim_team ht
   on r.home_team_key = ht.team_key
 inner join warehouse.dim_team awt
   on r.away_team_key = awt.team_key
+left join warehouse.dim_venue v
+  on m.venue_key = v.venue_key
 where upper(ht.fifa_code) = upper('${params.team}')
    or upper(awt.fifa_code) = upper('${params.team}')
 order by m.match_no
@@ -130,6 +133,7 @@ order by m.match_no
   <Column id=home_score title="" align=center />
   <Column id=away_score title="" align=center />
   <Column id=away_team title="Away" />
+  <Column id=venue title="Venue" />
 </DataTable>
 
 {:else}
