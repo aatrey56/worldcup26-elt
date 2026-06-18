@@ -4,7 +4,7 @@ title: Group Standings
 
 The 48 teams are drawn into 12 groups (A through L) of 4. The top two from each group, plus the eight best third placed teams, advance to the round of 32.
 
-These tables are **live**. While a group match is in play, that team shows a colored dot and its points update **as things stand** (a current win counts as +3, a draw +1, a loss +0), and the table re-ranks on those provisional points. Once the match ends, the result is locked in. A 🟢 means the team is currently winning, ⚪ drawing, 🔴 losing.
+These tables are **live**. While a group match is in play, the team shows a small colored dot next to the live score and its points update **as things stand** (a current win counts as +3, a draw +1, a loss +0), and the table re-ranks on those provisional points. Once the match ends, the result is locked in. The dot is green when the team is winning, grey when drawing, red when losing.
 
 ```sql standings
 select
@@ -21,21 +21,23 @@ select
   s.gd,
   s.points,
   s.is_playing,
-  case s.live_status
-    when 'winning' then '🟢'
-    when 'tied' then '⚪'
-    when 'losing' then '🔴'
-    else ''
-  end
-  -- cast to int in the page query: Evidence stores the nullable score columns as
-  -- float in the parquet, so concatenating them directly renders "2.0-1.0"; the
-  -- cast makes it "2-1".
-  || case
-    when s.is_playing
-      then ' ' || cast(s.live_for as int) || '-' || cast(s.live_against as int)
-    else ''
-  end
-    as live
+  -- a small colored status dot + the live score, rendered as HTML (the Live
+  -- column uses contentType=html). The dot colour shows the in-play result;
+  -- scores are cast to int because Evidence stores them as float in the parquet
+  -- (so a raw concat would read "2.0-1.0").
+  case
+    when not s.is_playing then ''
+    else
+      '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;'
+      || 'margin-right:6px;vertical-align:middle;background:'
+      || case s.live_status
+        when 'winning' then '#16a34a'
+        when 'losing' then '#ef4444'
+        else '#9ca3af'
+      end
+      || ';"></span>'
+      || cast(s.live_for as int) || '-' || cast(s.live_against as int)
+  end as live
 from warehouse.fct_group_standings_live s
 inner join warehouse.dim_team t
   on s.team_key = t.team_key
@@ -58,7 +60,7 @@ order by group_letter
 <DataTable data={standings.filter(d => d.group_letter === g.group_letter)}>
   <Column id=rank title="#" align=center />
   <Column id=team_name title="Team" />
-  <Column id=live title="Live" align=center />
+  <Column id=live title="Live" contentType=html align=center />
   <Column id=played title="P" align=center />
   <Column id=won title="W" align=center />
   <Column id=drawn title="D" align=center />
