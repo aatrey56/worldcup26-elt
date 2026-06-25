@@ -23,6 +23,7 @@ and **$0 of hosting**.
   [top scorers](https://aatrey56.github.io/worldcup26-elt/scorers/),
   custom-[xG leaderboard](https://aatrey56.github.io/worldcup26-elt/xg/),
   [shot maps](https://aatrey56.github.io/worldcup26-elt/shots/),
+  [squad quality](https://aatrey56.github.io/worldcup26-elt/squads/),
   and per-team pages)
 - **dbt lineage docs:** https://aatrey56.github.io/worldcup26-elt/dbt-docs/
 
@@ -35,7 +36,8 @@ flowchart LR
     seed[schedule_seed.csv<br/>104 matches] --> dbt
     xgseed[xg_model seed<br/>trained coefficients] --> dbt
     annex[Annexe C seeds<br/>third-place seeding] --> dbt
-    duck --> dbt[dbt via Cosmos<br/>staging - intermediate - marts<br/>+ 130 quality tests]
+    wiki[Wikipedia squads<br/>+ top5_clubs seed] -->|club to league| dbt
+    duck --> dbt[dbt via Cosmos<br/>staging - intermediate - marts<br/>+ 128 quality tests]
     dbt -->|tests pass| marts[(marts: dim_*/fct_*<br/>fct_result.is_live, fct_shot.xg,<br/>fct_group_standings_live,<br/>projected fct_bracket, leaderboards)]
     marts --> dash[Evidence.dev dashboard]
     airflow[Airflow / Astro<br/>Cosmos DbtTaskGroup] -.orchestrates.-> duck
@@ -67,6 +69,11 @@ genuinely obtainable:
   adjustment, minutes-weighted empirical-Bayes shrinkage, a separate goalkeeper model, and a "carry"
   score, since the full possession-value methods that 2026 free data cannot support are achievable
   on a completed tournament.
+- **Wikipedia squad lists** (free) plus a hand-built club-to-top-5-league seed (`top5_clubs`, 2025/26
+  rosters) power a **squad-quality** context stat: the share of each squad that plays its club football
+  in a top-5 European league (Premier League, La Liga, Serie A, Bundesliga, Ligue 1). It is context,
+  not a prediction (Spain field a top-5-heavy squad yet drew 0-0 with Cape Verde), so it is kept out
+  of results and aggregates.
 
 ## Data model (DuckDB star schema, dbt)
 
@@ -78,10 +85,12 @@ genuinely obtainable:
   scores folded in, with a per-team winning/drawing/losing status), `fct_shot` (per shot, with
   SQL-scored `xg`), `fct_bracket` (knockout tree; its Round of 32 is **projected live** from current
   standings via FIFA's Annexe C third-place seeding (`int_projected_r32`), locks when the group
-  stage ends, and resolves to actual results as games are played).
+  stage ends, and resolves to actual results as games are played), `fct_squad_quality` (one row per
+  team: squad size, count and share of the squad playing in a top-5 European league; context only,
+  excluded from results).
 - **Aggregates:** `agg_team_tournament`, `agg_team_leaderboard`, `agg_player_xg` (xG, goals,
   finishing over/under), `agg_team_xg`, `agg_top_scorers`.
-- **Quality gate:** 130 dbt tests (generic + dbt_utils + singular), including 1:1 FIFA- and
+- **Quality gate:** 128 dbt tests (generic + dbt_utils + singular), including 1:1 FIFA- and
   football-data-to-schedule reconciliations, a no-silent-result-loss guard, no-double-booking,
   points reconciliation, Annexe C seed integrity, and shot-coordinate range checks. A failed test
   fails the run and fires a Slack alert.
