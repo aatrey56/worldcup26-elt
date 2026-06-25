@@ -1,5 +1,10 @@
 # World Cup 2026 ELT Pipeline
 
+[![Live Dashboard](https://img.shields.io/badge/Live%20Dashboard-aatrey56.github.io%2Fworldcup26--elt-2ea44f?style=for-the-badge&logo=github)](https://aatrey56.github.io/worldcup26-elt/)
+[![dbt docs](https://img.shields.io/badge/dbt%20lineage%20docs-View-orange?style=for-the-badge&logo=dbt)](https://aatrey56.github.io/worldcup26-elt/dbt-docs/)
+
+> **Live site:** https://aatrey56.github.io/worldcup26-elt/
+
 An end-to-end, **live** data platform for the 2026 FIFA World Cup (Jun 11 to Jul 19, 2026).
 Airflow (Astro) orchestrates dbt (via Cosmos) into DuckDB; a custom **expected-goals (xG) model**
 is trained on FIFA shot coordinates and deployed as pure SQL; and an Evidence.dev dashboard

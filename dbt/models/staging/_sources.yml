@@ -65,3 +65,20 @@ sources:
             description: "Full FIFA player-stats JSON object."
           - name: loaded_at
             description: "Ingest timestamp."
+
+      # --- Wikipedia 2026 FIFA World Cup squads (squad-quality context stat) ---
+      - name: squads
+        description: "One row per squad player (team_name, player), landed from the Wikipedia 2026 FIFA World Cup squads page by include/extract/load_squads.py. Feeds the fct_squad_quality top-5-league context stat. Empty if the squads load degraded."
+        columns:
+          - name: team_name
+            description: "National-team (country) name as it appears on Wikipedia."
+          - name: player
+            description: "Player full name."
+          - name: club
+            description: "Player's club name (join key to the top5_clubs seed)."
+          - name: position
+            description: "Squad position abbreviation (GK/DF/MF/FW)."
+          - name: payload
+            description: "Full parsed squad-row JSON object."
+          - name: loaded_at
+            description: "Ingest timestamp."

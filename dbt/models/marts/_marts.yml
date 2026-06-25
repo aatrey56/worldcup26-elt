@@ -162,6 +162,40 @@ models:
               to: ref('dim_team')
               field: team_key
 
+  - name: fct_squad_quality
+    description: "One row per WC 2026 national team: a squad-quality context stat. top5_count is how many of the team's players play club football in a top-5 European league (Premier League, La Liga, Serie A, Bundesliga, Ligue 1), from the Wikipedia squad list (stg_squads) joined to the top5_clubs seed; squad_size is the listed squad; top5_pct is the percentage. Context only (e.g. Spain is stacked with top-5 players yet drew 0-0 with Cape Verde); excluded from results/standings. Empty if the squads load degraded."
+    tests:
+      - dbt_utils.expression_is_true:
+          expression: "top5_count <= squad_size"
+    columns:
+      - name: team_key
+        description: "FK to dim_team (surrogate key)."
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              to: ref('dim_team')
+              field: team_key
+      - name: team_name
+        description: "Country name (canonical seed name)."
+        tests:
+          - not_null
+      - name: squad_size
+        description: "Number of players listed in the team's squad."
+        tests:
+          - not_null
+      - name: top5_count
+        description: "Number of squad players whose club is in a top-5 European league."
+        tests:
+          - not_null
+      - name: top5_pct
+        description: "top5_count as a percentage of squad_size (0-100)."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+
   # --- FIFA xG (Phase 2): pure-SQL scoring from the offline-trained model ---
   - name: dim_fifa_player
     description: "One row per FIFA player (player_id). Player dimension for xG leaderboards: names/teams from lineups, with the season top-scorers feed as a name fallback. position is null for players seen only in the top-scorers feed (no position there)."

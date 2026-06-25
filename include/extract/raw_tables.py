@@ -323,6 +323,72 @@ def replace_fifa_lineups(
     return len(rows)
 
 
+def replace_squads(
+    con: duckdb.DuckDBPyConnection, players: list[dict[str, Any]], loaded_at: datetime
+) -> int:
+    """Ensure raw.squads exists and replace it with one row per squad player.
+
+    players are {team_name, player, club, position} dicts parsed from the
+    Wikipedia "2026 FIFA World Cup squads" page. The grain is one row per
+    (team_name, player). The full parsed dict is also stored as a JSON payload so
+    dbt staging stays a clean 1:1 read. Full-snapshot delete-then-insert keeps the
+    load idempotent. Entries with no team_name or player are skipped and logged.
+    Empty-safe: an empty list simply lands an empty table.
+    """
+    con.execute(
+        """
+        create table if not exists raw.squads (
+            team_name  varchar,
+            player     varchar,
+            club       varchar,
+            position   varchar,
+            payload    json,
+            loaded_at  timestamp
+        )
+        """
+    )
+    rows: list[tuple[str, str, str, str, str, datetime]] = []
+    seen: set[tuple[str, str]] = set()
+    for entry in players or []:
+        if not isinstance(entry, dict):
+            logger.warning("squad entry is not an object (%r), skipping", type(entry))
+            continue
+        team_name = (entry.get("team_name") or "").strip()
+        player = (entry.get("player") or "").strip()
+        if not team_name or not player:
+            logger.warning(
+                "squad entry missing team_name/player (team=%r player=%r), skipping",
+                entry.get("team_name"),
+                entry.get("player"),
+            )
+            continue
+        key = (team_name, player)
+        if key in seen:
+            logger.warning(
+                "duplicate squad entry (team=%s, player=%s), keeping first",
+                team_name,
+                player,
+            )
+            continue
+        seen.add(key)
+        rows.append(
+            (
+                team_name,
+                player,
+                entry.get("club") or "",
+                entry.get("position") or "",
+                json.dumps(entry),
+                loaded_at,
+            )
+        )
+    con.execute("delete from raw.squads")
+    if rows:
+        con.executemany(
+            "insert into raw.squads values (?, ?, ?, ?, ?, ?)", rows
+        )
+    return len(rows)
+
+
 def replace_fifa_topscorers(
     con: duckdb.DuckDBPyConnection, players: list[dict[str, Any]], loaded_at: datetime
 ) -> int:

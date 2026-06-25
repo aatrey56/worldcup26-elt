@@ -26,7 +26,7 @@ from cosmos import (
     RenderConfig,
 )
 
-from include.extract import load_fifa, load_raw
+from include.extract import load_fifa, load_raw, load_squads
 
 DBT_PROJECT_PATH = Path("/usr/local/airflow/dbt")
 DBT_EXECUTABLE = "/usr/local/airflow/dbt_venv/bin/dbt"
@@ -77,6 +77,16 @@ with DAG(
         python_callable=load_fifa.main,
     )
 
+    # Wikipedia WC 2026 squads -> raw.squads, feeding the squad-quality context
+    # stat (fct_squad_quality). Squads change rarely, so it is fetched each run.
+    # Runs after FIFA so the three loaders never write DuckDB at once (DuckDB is
+    # single-writer; the DAG is serialized via max_active_tasks=1). The loader
+    # degrades gracefully on a Wikipedia outage, so it cannot abort the build.
+    extract_load_squads = PythonOperator(
+        task_id="extract_load_squads",
+        python_callable=load_squads.main,
+    )
+
     dbt_build = DbtTaskGroup(
         group_id="dbt_build",
         project_config=project_config,
@@ -87,4 +97,10 @@ with DAG(
 
     publish_dashboard = EmptyOperator(task_id="publish_dashboard")
 
-    extract_load_raw >> extract_load_fifa >> dbt_build >> publish_dashboard
+    (
+        extract_load_raw
+        >> extract_load_fifa
+        >> extract_load_squads
+        >> dbt_build
+        >> publish_dashboard
+    )

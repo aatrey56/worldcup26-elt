@@ -94,9 +94,11 @@ jobs:
       - name: Install Python tooling
         # pandas + pyarrow back the dbt python model int_projected_r32 (the
         # projected-bracket resolver); dbt-duckdb needs them to land its output.
+        # lxml + pandas.read_html parse the Wikipedia squads page in load_squads
+        # (the squad-quality context stat).
         run: |
           python -m pip install --upgrade pip
-          pip install dbt-duckdb==1.10.1 duckdb requests tenacity pandas pyarrow
+          pip install dbt-duckdb==1.10.1 duckdb requests tenacity pandas pyarrow lxml
 
       - name: dbt deps
         working-directory: dbt
@@ -123,6 +125,14 @@ jobs:
           WC_COMPETITION: WC
           WC_SEASON: "2026"
         run: python -m include.extract.load_fifa
+
+      - name: Load WC 2026 squads into DuckDB (squad-quality context stat)
+        # Wikipedia "2026 FIFA World Cup squads" -> raw.squads, feeding the
+        # fct_squad_quality top-5-league context stat. Squads change rarely, so it
+        # is fetched each run. load_squads degrades gracefully on a Wikipedia
+        # outage / restructure (logs and keeps the previous snapshot), so a squads
+        # hiccup never aborts the live update; it always exits 0.
+        run: python -m include.extract.load_squads
 
       - name: dbt build (seeds, models, tests)
         working-directory: dbt

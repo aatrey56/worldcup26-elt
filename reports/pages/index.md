@@ -6,7 +6,7 @@ The 23rd FIFA World Cup runs from **June 11 to July 19, 2026**, hosted across th
 
 **How to watch (United States):** English language coverage on FOX and FS1. Spanish language coverage on Peacock (every match streamed live in Spanish), plus Telemundo or Universo on linear TV and the Telemundo app. The per-match TV column on each page lists the Spanish options.
 
-**Explore:** [Group standings](/groups) - [Team leaderboard](/leaderboard) - [Knockout bracket](/bracket) - [Golden boot](/scorers) - [Expected goals](/xg) - [Shot map](/shots) - [Teams](/teams)
+**Explore:** [Group standings](/groups) - [Team leaderboard](/leaderboard) - [Knockout bracket](/bracket) - [Golden boot](/scorers) - [Expected goals](/xg) - [Shot map](/shots) - [Squad quality](/squads) - [Teams](/teams)
 
 The bracket fills in automatically as results load, and the expected-goals (xG) and shot-map pages are driven by a **custom xG model** trained on FIFA shot coordinates and scored in pure SQL inside the warehouse.
 

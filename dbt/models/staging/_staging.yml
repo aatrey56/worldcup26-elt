@@ -90,6 +90,27 @@ models:
         tests:
           - not_null
 
+  - name: stg_squads
+    description: "One row per WC 2026 squad player (team_name, player), 1:1 from raw.squads (landed from the Wikipedia 2026 FIFA World Cup squads page). team_name is canonicalized to the seed's country names via the wiki_team_name_crosswalk seed. Empty if the squads load degraded."
+    columns:
+      - name: team_name
+        description: "Country name, crosswalk-canonicalized to the schedule seed names (e.g. United States -> USA)."
+        tests:
+          - not_null
+      - name: player
+        description: "Player full name as listed on Wikipedia."
+        tests:
+          - not_null
+      - name: club
+        description: "Player's club name as listed on Wikipedia (the join key to the top5_clubs seed)."
+      - name: position
+        description: "Squad position abbreviation (GK/DF/MF/FW)."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - team_name
+            - player
+
   # --- FIFA public API (api.fifa.com v3) shot-level staging, Phase 1 ---
   - name: stg_fifa_matches
     description: "One row per FIFA calendar match (competition 17, season 285023). JSON extracted from raw.fifa_matches. Scores/possession are null pre-tournament."

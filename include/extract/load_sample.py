@@ -36,6 +36,7 @@ from include.extract.raw_tables import (
     replace_fifa_matches,
     replace_fifa_topscorers,
     replace_fixtures,
+    replace_squads,
     replace_standings,
     validate_fifa_matches,
     validate_matches,
@@ -107,6 +108,18 @@ def load_fifa(con: duckdb.DuckDBPyConnection, loaded_at: datetime) -> dict[str, 
     }
 
 
+def load_squads(con: duckdb.DuckDBPyConnection, loaded_at: datetime) -> int:
+    """Land the committed squads sample (a trimmed subset of WC 2026 squads).
+
+    squads.json is a representative slice of the Wikipedia squad data: one entry
+    per player ({team_name, player, club, position}), exactly the shape the live
+    loader (include/extract/load_squads.py) parses and lands. Keeps the
+    fct_squad_quality (top-5-league context stat) build hermetic in CI.
+    """
+    players = _load_json("squads.json")
+    return replace_squads(con, players, loaded_at)
+
+
 def main() -> None:
     db = _db_path()
     loaded_at = datetime.now(UTC)
@@ -117,7 +130,13 @@ def main() -> None:
         align_standings_schema(con)
         n_fix = load_fixtures(con, loaded_at)
         n_std = load_standings(con, loaded_at)
-        logger.info("raw.fixtures: %d rows, raw.standings: %d rows", n_fix, n_std)
+        n_squads = load_squads(con, loaded_at)
+        logger.info(
+            "raw.fixtures: %d rows, raw.standings: %d rows, raw.squads: %d rows",
+            n_fix,
+            n_std,
+            n_squads,
+        )
         # F7: FIFA sample loading is decoupled from the football-data hermetic
         # path. The football-data sample load above is the critical CI contract;
         # a missing/malformed FIFA sample must NOT break it. We therefore land
