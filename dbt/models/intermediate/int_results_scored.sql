@@ -63,10 +63,15 @@ fifa_raw as (
         match_id as fifa_match_id,
         status,
         match_date,
+        home_team_id,
+        away_team_id,
         home_team_name,
         away_team_name,
         home_score,
         away_score,
+        home_penalty_score,
+        away_penalty_score,
+        winner_team_id,
         loaded_at
     from {{ ref('stg_fifa_matches') }}
     where
@@ -107,6 +112,20 @@ fifa_scored as (
         (f.status in (3, 12)) as is_live,
         cast('fifa' as varchar) as source,
         f.match_date as kickoff_ts,
+        -- penalty-shootout scores (null unless the match went to a shootout).
+        f.home_penalty_score as home_pens,
+        f.away_penalty_score as away_pens,
+        -- the DECIDED winner's canonical seed name, resolved from FIFA's Winner
+        -- team id. Set for any decided knockout incl. shootouts/extra time, so a
+        -- level full-time score (a shootout) still carries its true winner. Null
+        -- for draws and unplayed matches. The Winner id equals one of the two team
+        -- ids, so we map it back to the (crosswalked) seed name.
+        case
+            when f.winner_team_id = f.home_team_id
+                then coalesce(hx.seed_name, f.home_team_name)
+            when f.winner_team_id = f.away_team_id
+                then coalesce(ax.seed_name, f.away_team_name)
+        end as winner_team_name,
         -- source_loaded_at drives the fct_result incremental predicate. For FIFA
         -- we use the LOADER timestamp (loaded_at), which strictly advances on
         -- every run, NOT LastPeriodUpdate. LastPeriodUpdate is null in-play and
@@ -188,6 +207,13 @@ fd_scored as (
         cast(false as boolean) as is_live,
         cast('football-data' as varchar) as source,
         f.kickoff_utc as kickoff_ts,
+        -- football-data is the fallback and is not used for live knockouts, so it
+        -- does not carry shootout scores or an explicit winner here; FIFA (primary)
+        -- supplies those. A football-data-sourced knockout shootout would fall back
+        -- to the score-based winner (null on a level score) - an accepted edge case.
+        cast(null as int) as home_pens,
+        cast(null as int) as away_pens,
+        cast(null as varchar) as winner_team_name,
         -- source_loaded_at is the provider's lastUpdated (carried to drive the
         -- fct_result incremental predicate), coalesced to loaded_at so a null
         -- never drops the row. football-data rows are always finished, so
@@ -220,6 +246,9 @@ combined as (
         is_live,
         source,
         kickoff_ts,
+        home_pens,
+        away_pens,
+        winner_team_name,
         source_loaded_at
     from fifa_scored
     where match_no is not null
@@ -241,6 +270,9 @@ combined as (
         is_live,
         source,
         kickoff_ts,
+        home_pens,
+        away_pens,
+        winner_team_name,
         source_loaded_at
     from fd_scored
     where match_no is not null
@@ -280,6 +312,9 @@ select
     is_live,
     source,
     kickoff_ts,
+    home_pens,
+    away_pens,
+    winner_team_name,
     source_loaded_at
 from ranked
 where src_rank = 1

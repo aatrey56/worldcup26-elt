@@ -19,6 +19,7 @@ select
   live_for,
   live_against,
   live_status,
+  fifa_rank,
   rank
 from main.fct_group_standings_live
 
@@ -40,5 +41,6 @@ select
   cast(null as integer)                     as live_for,
   cast(null as integer)                     as live_against,
   cast(null as varchar)                     as live_status,
+  cast(null as integer)                     as fifa_rank,
   cast(null as bigint)                      as rank
 where not exists (select 1 from main.fct_group_standings_live)

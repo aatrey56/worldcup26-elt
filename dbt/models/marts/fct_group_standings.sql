@@ -3,9 +3,12 @@
 --
 -- FIX 4: qualification for the 2026 format. 32 of 48 teams advance:
 --   the top 2 of every group (24 teams), PLUS the 8 best third-placed teams
---   across all 12 groups. The 8 best thirds are ranked across groups by
---   points DESC, gd DESC, gf DESC, then team_name (a deterministic final
---   tiebreaker so ties do not flip between runs); the top 8 qualify.
+--   across all 12 groups. Per FIFA Art. 13 the 8 best thirds are ranked across
+--   groups by points DESC, overall gd DESC, overall gf DESC, then conduct score
+--   (cards, not ingested -> skipped), then the FIFA World Ranking
+--   (fifa_world_ranking seed, ASC), with team_name as a deterministic final
+--   tiebreaker. Head-to-head does NOT apply to the cross-group third-place
+--   ranking; the top 8 qualify.
 --
 -- COMPLETENESS GATING: qualified_flag stays FALSE until the relevant group(s)
 -- finish, so it never asserts a qualification the data cannot yet support. A
@@ -56,12 +59,14 @@ all_groups_complete as (
 best_thirds as (
 
     -- rank the third-placed team of each group across all groups; top 8 qualify.
-    -- team_name is the deterministic final tiebreaker.
+    -- FIFA Art. 13 order: points, overall gd, overall gf, then conduct (cards,
+    -- not ingested) and the seeded FIFA World Ranking; team_name is the
+    -- deterministic final tiebreaker. No head-to-head across groups.
     select
         group_letter,
         team_name,
         row_number() over (
-            order by points desc, gd desc, gf desc, team_name asc
+            order by points desc, gd desc, gf desc, fifa_rank asc nulls last, team_name asc
         ) as third_rank
     from standings
     where rank = 3

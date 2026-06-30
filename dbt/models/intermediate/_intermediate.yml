@@ -69,8 +69,11 @@ models:
   - name: int_group_table
     description: >
       One row per (group_letter, team), recomputed from finished group matches.
-      won/drawn/lost are derived from the points column; ranked within each group
-      by points, goal difference, goals scored.
+      won/drawn/lost are derived from the points column. Ranked within each group
+      by the full FIFA World Cup 2026 order (Art. 13): points, then head-to-head
+      among teams level on points (h2h points/gd/gf), then overall gd, overall gf,
+      then the seeded FIFA World Ranking (conduct/card score is not ingested and is
+      skipped), with team_name as the deterministic final key.
 
   - name: int_group_table_live
     description: >
@@ -79,11 +82,61 @@ models:
       current score of an in-play match into the standings "as things stand" and
       adds per-team live status/score. Left-joined from dim_team so every group
       always has 4 teams (a determinate 3rd place for the bracket resolver).
+      Ranked by the same FIFA Art. 13 order as int_group_table (points,
+      head-to-head, overall gd/gf, FIFA World Ranking) on the provisional points.
     columns:
       - name: rank
         description: "Provisional 1-4 within the group (in-play scores included)."
         tests:
           - not_null
+      - name: fifa_rank
+        description: >
+          The team's FIFA/Coca-Cola Men's World Ranking position (from the
+          fifa_world_ranking seed, June 2026 edition), used as a tiebreaker. The
+          not_null test doubles as a gate that the seed names cover all 48 teams.
+        tests:
+          - not_null
+
+  - name: int_group_clinch
+    description: >
+      One row per (group_letter, position) over the 12 groups x 4 positions (48
+      rows once all groups have their teams): whether the team currently in that
+      group position has MATHEMATICALLY clinched finishing in EXACTLY that
+      position. A dbt python model that enumerates every win/draw/loss combination
+      of a group's remaining fixtures (3^k, k<=6); a position is clinched when, in
+      every combination, no other team can finish above the team beyond what the
+      position allows. It is HEAD-TO-HEAD aware (FIFA Art. 13 step one): a team
+      that has beaten everyone who can still match its points is locked even when
+      it is not points-separated (e.g. a group winner confirmed on head-to-head).
+      It is SOUND (never a false positive): only points and head-to-head points
+      (both decided by results, not scorelines) are used, so any tie that
+      head-to-head leaves level is treated as still open, since goal margins are
+      not enumerated. A completed group is final, so all its positions are
+      clinched. Drives the "(!)" confirmed vs "(proj)" projected marker on the
+      bracket page.
+    columns:
+      - name: group_letter
+        description: "Group A..L."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
+      - name: position
+        description: "Group position 1-4 (1 = winner, 2 = runner-up, 3 = third)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: [1, 2, 3, 4]
+      - name: team_name
+        description: "Team currently in that position (finished-results order)."
+        tests:
+          - not_null
+      - name: is_clinched
+        description: "True when the position is mathematically locked for that team."
+        tests:
+          - not_null
+          - accepted_values:
+              values: [true, false]
 
   - name: int_projected_r32
     description: >

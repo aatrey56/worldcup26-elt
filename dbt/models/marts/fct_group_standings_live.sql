@@ -27,6 +27,7 @@ with standings as (
         live_for,
         live_against,
         live_status,
+        fifa_rank,
         rank
     from {{ ref('int_group_table_live') }}
 
@@ -59,6 +60,7 @@ select
     s.live_for,
     s.live_against,
     s.live_status,
+    s.fifa_rank,
     s.rank
 from standings as s
 left join teams as t

@@ -22,9 +22,14 @@
 -- (so the page can show "+3 as things stand"). A team not currently playing has
 -- is_playing = false and null live_* fields.
 --
--- TIEBREAK: same first-three official criteria as int_group_table (points, goal
--- difference, goals for) with team_name as the deterministic final tiebreaker.
--- Head-to-head / fair-play (FIFA criteria 4+) are not implemented here either.
+-- TIEBREAK: the full FIFA World Cup 2026 group ranking (Art. 13), applied to the
+-- PROVISIONAL (live) points so the table re-ranks as things stand. Order: points,
+-- then head-to-head among teams level on points (h2h points, h2h gd, h2h gf),
+-- then overall gd, overall gf, then the seeded FIFA ranking, with team_name as
+-- the deterministic final key. Conduct/card score (FIFA criterion 7) is not
+-- ingested and is skipped. Head-to-head is computed in a single pass among the
+-- teams sharing a points total; the rare recursive 3-way re-computation is not
+-- modelled. Identical logic to int_group_table (the finished-only table).
 
 with group_results as (
 
@@ -106,6 +111,63 @@ aggregated as (
 
 ),
 
+-- HEAD-TO-HEAD (FIFA step one), on the live points. A match counts toward
+-- head-to-head only when both teams share the same provisional points total, so
+-- the head-to-head split applies exactly among the teams currently level.
+h2h_matches as (
+
+    select gr.*
+    from group_results as gr
+    inner join aggregated as ah
+        on gr.group_letter = ah.group_letter and gr.home_team = ah.team_name
+    inner join aggregated as aa
+        on gr.group_letter = aa.group_letter and gr.away_team = aa.team_name
+    where ah.points = aa.points
+
+),
+
+h2h_per_team as (
+
+    select
+        group_letter,
+        home_team as team_name,
+        home_points as pts,
+        home_score as gf,
+        away_score as ga
+    from h2h_matches
+    union all
+    select
+        group_letter,
+        away_team as team_name,
+        away_points as pts,
+        away_score as gf,
+        home_score as ga
+    from h2h_matches
+
+),
+
+h2h_agg as (
+
+    select
+        group_letter,
+        team_name,
+        sum(pts) as h2h_points,
+        sum(gf) - sum(ga) as h2h_gd,
+        sum(gf) as h2h_gf
+    from h2h_per_team
+    group by group_letter, team_name
+
+),
+
+fifa as (
+
+    select
+        team_name,
+        fifa_rank
+    from {{ ref('fifa_world_ranking') }}
+
+),
+
 all_teams as (
 
     select
@@ -144,28 +206,42 @@ filled as (
 )
 
 select
-    group_letter,
-    team_name,
-    played,
-    won,
-    drawn,
-    lost,
-    gf,
-    ga,
-    gd,
-    points,
-    is_playing,
-    points_live_delta,
-    live_for,
-    live_against,
+    fl.group_letter,
+    fl.team_name,
+    fl.played,
+    fl.won,
+    fl.drawn,
+    fl.lost,
+    fl.gf,
+    fl.ga,
+    fl.gd,
+    fl.points,
+    fl.is_playing,
+    fl.points_live_delta,
+    fl.live_for,
+    fl.live_against,
+    f.fifa_rank,
     case
-        when not is_playing then null
-        when live_for > live_against then 'winning'
-        when live_for = live_against then 'tied'
+        when not fl.is_playing then null
+        when fl.live_for > fl.live_against then 'winning'
+        when fl.live_for = fl.live_against then 'tied'
         else 'losing'
     end as live_status,
     row_number() over (
-        partition by group_letter
-        order by points desc, gd desc, gf desc, team_name asc
+        partition by fl.group_letter
+        order by
+            fl.points desc,
+            coalesce(h.h2h_points, 0) desc,
+            coalesce(h.h2h_gd, 0) desc,
+            coalesce(h.h2h_gf, 0) desc,
+            fl.gd desc,
+            fl.gf desc,
+            -- conduct score (cards) would sit here; not ingested, so skipped
+            f.fifa_rank asc nulls last,
+            fl.team_name asc
     ) as rank
-from filled
+from filled as fl
+left join h2h_agg as h
+    on fl.group_letter = h.group_letter and fl.team_name = h.team_name
+left join fifa as f
+    on fl.team_name = f.team_name

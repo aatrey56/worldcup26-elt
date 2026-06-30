@@ -14,11 +14,11 @@
 --                         stg_schedule placeholder text)
 --   away_label = same on the away side.
 -- winner_label resolves the same way from fct_result.winner_team_key, and is
--- null for an unplayed match. KNOWN LIMITATION: winner_team_key is derived only
--- from full-time score (int_results_scored), so a knockout decided on penalties
--- (level at full time) currently has a null winner_label. Penalty-shootout
--- winners need penalty-score ingestion (football-data score.penalties / FIFA
--- HomeTeamPenaltyScore) and must be wired before the knockout stage (Jun 28).
+-- null for an unplayed match. SHOOTOUTS: fct_result.winner_team_key uses FIFA's
+-- explicit Winner team id, which is set for any decided knockout including ones
+-- settled in extra time or on penalties, so a level-at-full-time shootout still
+-- shows the advancing team. home_pens/away_pens carry the shootout score for the
+-- "1-1 (4-3 pens)" display, and are null unless the match went to a shootout.
 -- NOTE: home_label/away_label follow the played fixture's home/away once a match
 -- is played (positional schedule reconciliation), which may differ from the
 -- bracket feeder slot orientation; scores stay correctly paired with each label.
@@ -79,6 +79,8 @@ results as (
         away_team_key,
         home_score,
         away_score,
+        home_pens,
+        away_pens,
         winner_team_key
     from {{ ref('fct_result') }}
     where not is_live
@@ -106,8 +108,27 @@ projected as (
         match_no,
         home_team as projected_home,
         away_team as projected_away,
+        -- group-position seed labels (e.g. "1A", "2B", "3C"): the small position
+        -- tag the page renders next to each R32 team. Null for R16+ rows.
+        home_seed,
+        away_seed,
         is_provisional
     from {{ ref('int_projected_r32') }}
+
+),
+
+clinch as (
+
+    -- per (group, position) confirmation flag: is_clinched is true when the
+    -- team in that group position is MATHEMATICALLY locked there (no completion
+    -- of the remaining group fixtures can move it out), including locks decided
+    -- by head-to-head (FIFA Art. 13 step one). Keyed by a seed-style label
+    -- (position || group_letter, e.g. "1A") so it joins straight onto the R32
+    -- home_seed / away_seed. Sound (never a false positive); see int_group_clinch.
+    select
+        cast(position as varchar) || group_letter as seed,
+        is_clinched
+    from {{ ref('int_group_clinch') }}
 
 )
 
@@ -130,7 +151,37 @@ select
     coalesce(awt.team_name, p.projected_away, sl.away_placeholder) as away_label,
     r.home_score,
     r.away_score,
+    r.home_pens,
+    r.away_pens,
     wt.team_name as winner_label,
+    -- group-position seed tags for the R32 slots (e.g. "1A" / "3C"); null for
+    -- R16+ rows (their feeders are not resolved yet) and once the slot shows an
+    -- actual played team (the projection no longer applies).
+    case when r.match_key is null then p.home_seed end as home_seed,
+    case when r.match_key is null then p.away_seed end as away_seed,
+    -- whether the projected team's group position is mathematically clinched
+    -- ("(!)" confirmed) vs still projected from current standings ("(proj)").
+    -- Only meaningful for an R32 slot still shown from the projection; null
+    -- otherwise (R16+, or a slot that already has a played team).
+    case
+        when r.match_key is null and p.home_seed is not null
+            then coalesce(hc.is_clinched, false)
+    end as home_clinched,
+    case
+        when r.match_key is null and p.away_seed is not null
+            then
+                coalesce(ac.is_clinched, false)
+                -- a 3rd-place seed (e.g. "3C") is locked into THIS R32 slot only
+                -- once the group stage is final (best-8 thirds + the Annexe C
+                -- combo are settled); a team locking 3rd in its group earlier is
+                -- not yet confirmed in the bracket, so gate 3rd seeds on the
+                -- projection no longer being provisional. Winner/runner-up seeds
+                -- (home is always 1X/2X; away may be 2X) need no such gate.
+                and (
+                    p.away_seed not like '3%'
+                    or not coalesce(p.is_provisional, true)
+                )
+    end as away_clinched,
     -- the matchup is shown from projection (not an actual result) when no
     -- finished result exists yet but a projected team is available.
     (r.match_key is null and p.match_no is not null) as is_projected,
@@ -151,3 +202,7 @@ left join teams as wt
     on r.winner_team_key = wt.team_key
 left join projected as p
     on km.match_no = p.match_no
+left join clinch as hc
+    on p.home_seed = hc.seed
+left join clinch as ac
+    on p.away_seed = ac.seed

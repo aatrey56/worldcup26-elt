@@ -99,13 +99,21 @@ not hold yet.
   Knockout matches need a `winner` that falls back to a `pens_winner` column when
   the 90+ET result is level. Add that to the result model that feeds R16; the
   seeding layer here does not touch it.
-- Conduct-score data: API-Football’s free tier does not reliably expose per-match
-  card counts in a form that reconstructs the FIFA conduct score. The resolver
-  defaults `conduct` to 0 and `fifa_rank` to a sentinel, so it degrades to
-  points/GD/GF only. That is correct in the vast majority of cases but can mis-rank
-  the 8th-vs-9th third-place cutoff when teams are dead level on the top three. If
-  you want exact behavior at that boundary, source card data or hardcode the FIFA
-  ranking snapshot as a small seed.
+- FIFA ranking data: now provided. `dbt/seeds/fifa_world_ranking.csv` holds the
+  FIFA/Coca-Cola Men's World Ranking (June 2026 edition, the most recent published
+  before kickoff) for all 48 teams; it flows through int_group_table_live as a
+  `fifa_rank` column and is passed into the resolver, so the third-place ranking
+  and the in-group tables apply the FIFA-ranking tiebreaker (Art. 13 final
+  criterion). Positions outside the published top 50 are the known June-2026
+  values. A `not_null` test on int_group_table_live.fifa_rank gates that the seed
+  names cover every team.
+- Conduct-score data: still not ingested. API-Football's free tier does not
+  reliably expose per-match card counts in a form that reconstructs the FIFA
+  conduct score, so the resolver defaults `conduct` to 0 and the SQL tables skip
+  it. Conduct sits between overall goals-scored and the FIFA ranking; with the
+  ranking now seeded, the only residual gap is the rare case where teams are dead
+  level through goals-scored AND a card count would have separated them before the
+  ranking does. Source card data if you want exact behavior at that boundary.
 - The 8th-place cutoff is the only place a tie actually changes who advances.
   Worth a dbt test that flags when thirds ranked 8 and 9 are equal on points, GD,
   and GF, so you know when the cheaper ranking might diverge from official.

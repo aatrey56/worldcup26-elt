@@ -357,6 +357,14 @@ models:
         description: "Resolved away team name if the match is played, else the schedule placeholder text."
         tests:
           - not_null
+      - name: home_seed
+        description: "Group-position seed tag for the home slot on an R32 projection (e.g. '1A', '2B', '3C'). Null for R16+ rows and for any slot already showing a played team."
+      - name: away_seed
+        description: "Group-position seed tag for the away slot on an R32 projection. Null for R16+ rows and for any slot already showing a played team."
+      - name: home_clinched
+        description: "True when the home slot's projected group position is mathematically clinched (confirmed), false when still projected from current standings. Null when not an active R32 projection slot (R16+, or already played)."
+      - name: away_clinched
+        description: "True when the away slot's projected group position is mathematically clinched (confirmed), false when still projected. Null when not an active R32 projection slot."
       - name: is_projected
         description: "True for an R32 slot filled from the current-standings projection (no actual result yet)."
         tests:

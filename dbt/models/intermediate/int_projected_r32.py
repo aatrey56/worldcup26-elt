@@ -54,8 +54,11 @@ def model(dbt, session):
             "points": int(row.points),
             "gd": int(row.gd),
             "gf": int(row.gf),
-            # conduct / fifa_rank are not in the warehouse; the resolver defaults
-            # them, degrading Art. 13 to points/GD/GF (see spec notes).
+            # conduct (cards) is still not ingested, so the resolver defaults it
+            # to 0; fifa_rank now comes from the fifa_world_ranking seed (via
+            # int_group_table_live), so the best-8 third-place ranking applies the
+            # FIFA World Ranking tiebreaker (Art. 13) rather than the sentinel.
+            "fifa_rank": int(row.fifa_rank) if pd.notna(row.fifa_rank) else 9999,
         }
         if row.rank == 1:
             winners[row.group_letter] = team

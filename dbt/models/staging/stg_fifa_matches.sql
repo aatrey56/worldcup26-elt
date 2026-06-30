@@ -28,6 +28,14 @@ select
     payload ->> '$.Away.TeamName[0].Description' as away_team_name,
     cast(payload ->> '$.HomeTeamScore' as int) as home_score,
     cast(payload ->> '$.AwayTeamScore' as int) as away_score,
+    -- penalty-shootout scores; null unless a knockout went to a shootout. Their
+    -- presence is the shootout indicator (and they drive the "(4-3 pens)" display).
+    cast(payload ->> '$.HomeTeamPenaltyScore' as int) as home_penalty_score,
+    cast(payload ->> '$.AwayTeamPenaltyScore' as int) as away_penalty_score,
+    -- FIFA's resolved winner team id: set for any DECIDED knockout (normal time,
+    -- extra time, OR penalties), so it cleanly carries the shootout winner that a
+    -- level full-time score cannot. Null for draws and unplayed matches.
+    cast(payload ->> '$.Winner' as bigint) as winner_team_id,
     cast(payload ->> '$.BallPossession.OverallHome' as double) as home_possession,
     cast(payload ->> '$.BallPossession.OverallAway' as double) as away_possession,
     loaded_at

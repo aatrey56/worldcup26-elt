@@ -18,6 +18,12 @@ test-paths: ["tests"]
 target-path: "target"
 clean-targets: ["target", "dbt_packages"]
 
+seeds:
+  worldcup26:
+    fifa_world_ranking:
+      +column_types:
+        fifa_rank: integer
+
 models:
   worldcup26:
     staging:
